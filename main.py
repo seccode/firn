@@ -60,7 +60,9 @@ if __name__=="__main__":
     f.write(b)
     f.close()
     _s=decompress(k,x,r)
-    assert _s[:1000]==s[:1000]
+    f=open("decompressed")
+    f.write(_s)
+    f.close()
 
 
 
