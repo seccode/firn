@@ -5,5 +5,5 @@ The firn data compression algorithm is to store the first letter of every word a
 | Algorithm | Original Size | Compressed Size | Compression Ratio |
 |-----------|---------------|-----------------|-------------------|
 | zstd      | 10.192 MB     | 3.633 MB        | 2.81x             |
-| firn      | 10.192 MB     | 3.529 MB        | 2.89x             |
+| firn+zstd | 10.192 MB     | 3.529 MB        | 2.89x             |
 
