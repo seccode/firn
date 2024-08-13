@@ -6,10 +6,6 @@ import zstandard as zstd
 
 def compress(s):
     comp=zstd.ZstdCompressor()
-    separator="!!!!!!!!"
-    while separator in s:
-        separator+="!"
-
     words=s.split(" ")
     x=[]
     d=defaultdict(list)
