@@ -87,11 +87,12 @@ if __name__=="__main__":
     t=get_symbols()
     i=420
     possible=True
+    word_set=set(s.split(" "))
     while True:
         found=False
         try:
             for S in t:
-                if " "+chr(i)+S+" " in s:
+                if chr(i)+S in word_set:
                     found=True
                     break
         except:
