@@ -1,109 +1,94 @@
-from collections import Counter,OrderedDict
-from concurrent.futures import ThreadPoolExecutor,as_completed
-import csv
-import time
+from collections import Counter,defaultdict
 from tqdm import tqdm
 import zstandard as zstd
 
-def get_symbols():
-    t=["e","t","o","n","i","h","s","r","d","l","u","m",",","w","c","f","g","y","p","b","'","v","k","-","M",'"',";","S","!","H","C","x","W","D","?"]
-    a=t[:]
-    for l0 in a:
-        for l1 in a:
-            t.append(l0+l1)
-    return t
-
-def compress(s,C,possible):
+def compress(s):
     comp=zstd.ZstdCompressor(level=22)
-    if possible:
-        words=s.split(" ")
-        c=Counter(words).most_common()
-        d=OrderedDict()
+    words=s.split(" ")
+    mc=Counter(words).most_common()
+    g=defaultdict(dict)
+    for m in tqdm(mc):
+        if m[0]=="":
+            continue
+        g[m[0][0]][m[0]]=0
+    d={}
+    h=defaultdict(dict)
+    u=defaultdict(dict)
+    for k,v in tqdm(g.items()):
         i=0
-        j=0
-        t=get_symbols()
-        while i<len(t):
-            if len(c[j][0])==1 or \
-                (len(c[j][0])<=len(t[i])):
-                j+=1
+        for word in v.keys():
+            l=len(word)
+            if l<2:
+                continue
+            if l in h[k] and l not in u[k]:
+                u[k][l]=word
             else:
-                d[c[j][0]]=t[i]
-                i+=1
-                j+=1
-        y=set(d.values())
-        r=[]
-        for i,word in tqdm(enumerate(words),total=len(words)):
-            if word in d:
-                if i==0:
-                    r.append(d[word])
-                else:
-                    r.append(" "+d[word])
+                h[k][l]=word
+            d[word]=word[0]
+    new_words=[]
+    x=[]
+    word_set=set(words)
+    for word in tqdm(words):
+        l=len(word)
+        if word in d:
+            w=word[0]+chr(l)
+            if w in word_set:
+                new_words.append(w+chr(0))
             else:
-                if word in y:
-                    if i==0:
-                        r.append(C+word)
-                    else:
-                        r.append(" "+C+word)
-                else:
-                    if i==0:
-                        r.append(word)
-                    else:
-                        r.append(" "+word)
-        x="^".join(d.keys())+"`"+"".join(r)
-        c=comp.compress(x.encode("utf-8","replace"))
-    else:
-        c=comp.compress(s.encode("utf-8","replace"))
-    return c
-
-def decompress(c,C):
-    d=zstd.decompress(c).decode("utf-8","replace")
-    split_string=d.split("`",1)
-    dic=split_string[0].split("^")
-    text=split_string[1]
-    words=text.split(" ")
-    t=get_symbols()
-    d=OrderedDict()
-    for i,S in enumerate(t[:len(dic)]):
-        d[S]=dic[i]
-    j=set(d.keys())
-    res=[]
-    for word in words:
-        if word[1:] in d and word[0]==C:
-            res.append(word[1:])
-        elif word in d:
-            res.append(d[word])
+                new_words.append(w)
+            if word==h[word[0]][l]:
+                x.append("0")
+            elif word==u[word[0]][l]:
+                x.append("1")
         else:
-            res.append(word)
-    s=" ".join(res)
+            new_words.append(word)
+    _h=[]
+    for v in h.values():
+        _h.extend(v.values())
+    _u=[]
+    for v in u.values():
+        _u.extend(v.values())
+    ws=[word for word in word_set if len(word)==2 or len(word)==3]
+    sc=(chr(0)+chr(0)).join([" ".join(new_words),"".join(x)," ".join(_h)," ".join(_u)," ".join(ws)])
+    return comp.compress(sc.encode("utf-8","replace"))
+
+def decompress(b):
+    sc=zstd.decompress(b).decode("utf-8","replace")
+    new_words,x,_h,_u,ws=sc.split((chr(0)+chr(0)))
+    ws=set(ws.split(" "))
+    h=defaultdict(dict)
+    for word in _h.split(" "):
+        h[word[0]][len(word)]=word
+    u=defaultdict(dict)
+    for word in _u.split(" "):
+        u[word[0]][len(word)]=word
+    words=[]
+    i=0
+    for word in new_words.split(" "):
+        l=len(word)
+        if (l==2 or l==3) and word not in ws:
+            o=ord(word[1])
+            if x[i]=="0":
+                words.append(h[word[0]][o])
+            else:
+                # TODO: fix bug
+                words.append(u[word[0]][o])
+            i+=1
+    s=" ".join(words)
     return s
 
 if __name__=="__main__":
-    s=open("dickens",encoding="Windows-1252").read()
+    s=open("dickens",encoding="latin-1").read()
     comp=zstd.ZstdCompressor(level=22)
     b=comp.compress(s.encode("utf-8","replace"))
     f=open("1","wb")
     f.write(b)
     f.close()
-    t=get_symbols()
-    i=420
-    possible=True
-    word_set=set(s.split(" "))
-    while True:
-        found=False
-        try:
-            for S in t:
-                if chr(i)+S in word_set:
-                    found=True
-                    break
-        except:
-            possible=False
-        if not found:
-            break
-        i+=1
-    C=chr(i)
-    b=compress(s,C,possible)
+
+    b=compress(s)
     f=open("2","wb")
     f.write(b)
     f.close()
-    _s=decompress(b,C)
+    _s=decompress(b)
+
     assert _s==s
