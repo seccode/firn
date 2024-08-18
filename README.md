@@ -1,5 +1,5 @@
 # firn
-The firn algorithm has many components.
+The firn algorithm has two components.
 -  Replace common words with short symbols. Even if short symbols such as "e" are already present in the text, though infrequent, we are able to use "e" as a replacement symbol by adding a special character to existing "e"'s.
 -  Replace common words with the first character and chr(len(character)) as the second character. Store two dictionaries that have mappings from first character and length to actual word. Each dictionary contains one set of mappings. When replacing words, store a binary string indicating which dictionary should be used for which word.
 
