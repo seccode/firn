@@ -18,10 +18,10 @@ def compress(s,comp):
         j=0
         seen=set()
         seeds=[]
-        while j%len(x) not in seen and x[j%len(x)]=="0" and len(seen)<800:
+        while j%len(x) not in seen and x[j%len(x)]=="0" and len(seen)<300:
             seen.add(j%len(x))
             j+=i
-        if len(seen)==800:
+        if len(seen)==300:
             seeds.append(chr(i-last))
             last=i
             t.update(seen)
@@ -30,27 +30,58 @@ def compress(s,comp):
         if i not in t:
             y.append(x[i])
     v=chr(1114110).join([
+        chr(len(x)),
         "".join(seeds),
         " ".join(mc)
     ])
-    return comp.compress("".join(y).encode())+comp.compress(v.encode("utf-8","replace"))
+    return comp.compress("".join(y).encode()),comp.compress(v.encode("utf-8","replace"))
 
-def decompress(b):
-    v=zstd.decompress(b).decode("utf-8","replace")
+def decompress(y,b):
+    y=list(zstd.decompress(y).decode())
+    d=zstd.decompress(b).decode("utf-8","replace")
+    _x,seeds,mc=d.split(chr(1114110))
+    d={"0"*i:m for i,m in enumerate(mc)}
+    x=[]
+    inds=set()
+    o=ord(_x)
+    for seed in seeds:
+        j=ord(seed)
+        for i in range(300):
+            inds.add((j*i)%o)
+
+    #TODO:Fix why these values aren't the same
+    print(o)
+    print(len(y)+len(inds))
+
+    for i in range(o):
+        if i in inds:
+            x.append("0")
+        else:
+            x.append(y.pop())
+    x="".join(x)
     words=[]
+    for z in x.split("1"):
+        words.append(d[z])
     s=" ".join(words)
     return s
 
 if __name__=="__main__":
-    s=open("dickens",encoding="latin-1").read()[:10000]
+    s=open("dickens",encoding="latin-1").read()[:1000]
     comp=zstd.ZstdCompressor(level=22)
-    b=comp.compress(s.encode("utf-8","replace"))
+    _b=comp.compress(s.encode("utf-8","replace"))
     f=open("1","wb")
+    f.write(_b)
+    f.close()
+    y,b=compress(s,comp)
+    print("\n************************************************")
+    print("Compressed "+str(len(s))+" bytes to "+str(len(y)+len(b))+" bytes")
+    print(str(round(100*(len(_b)-(len(y)+len(b)))/len(_b),2))+"% improvement over zstd")
+    print("************************************************\n")
+    f=open("y","wb")
+    f.write(y)
+    f.close()
+    f=open("b","wb")
     f.write(b)
     f.close()
-    b=compress(s,comp)
-    f=open("2","wb")
-    f.write(b)
-    f.close()
-    _s=decompress(b)
+    _s=decompress(y,b)
     assert _s==s
