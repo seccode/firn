@@ -45,7 +45,7 @@ def decompress(x,y):
     return " ".join(words).replace(chr(0),"  ")
 
 if __name__=="__main__":
-    s=open("dickens",encoding="latin-1").read()[:80000]
+    s=open("dickens",encoding="latin-1").read()[:40000]
     f=open("s","w")
     f.write(s)
     f.close()
