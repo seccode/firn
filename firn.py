@@ -7,9 +7,8 @@ import zstandard as zstd
 def compress(s,comp):
     s=s.replace("  ",chr(0))
     mcw=open("dict").read().split("\n")[14:]
-    words=s.split(" ")
-    mc=[m[0] for m in Counter(words).most_common()]
     d={m:"0"*(i+1) for i,m in enumerate(mcw)}
+    words=s.split(" ")
     x=[]
     y=[]
     for word in words:
@@ -24,19 +23,15 @@ def compress(s,comp):
     return comp.compress(x.encode()),comp.compress(" ".join(y).encode("utf-8","replace"))
 
 def decompress(x, y):
-    x = zstd.decompress(x).decode()
-    y = zstd.decompress(y).decode("utf-8", "replace").split(" ")
-    mcw = open("dict").read().split("\n")[14:]
-    d = {"0" * (i + 1): m for i, m in enumerate(mcw)}
-
-    # Replace back the compressed markers
-    x = x.replace("3", "2" * 18)
-    x = x.replace("2", "0" * 16)
-
-    words = []
-    i = 0
-    c = 0
-
+    x=zstd.decompress(x).decode()
+    y=zstd.decompress(y).decode("utf-8","replace").split(" ")
+    mcw=open("dict").read().split("\n")[14:]
+    d={"0"*(i+1):m for i, m in enumerate(mcw)}
+    x=x.replace("3","2"*18)
+    x=x.replace("2","0"*16)
+    words=[]
+    i=0
+    c=0
     while i < len(x):
         if x[i]=="1":
             if c>0:
@@ -49,11 +44,12 @@ def decompress(x, y):
         i+=1
     if c>0:
         words.append(d["0"*c])
-
-    return " ".join(words).replace(chr(0), "  ")
+    else:
+        words.append(y.pop())
+    return " ".join(words).replace(chr(0),"  ")
 
 if __name__=="__main__":
-    s=open("dickens",encoding="latin-1").read()[20000:25000]
+    s=open("dickens",encoding="latin-1").read()[20000:26000]
     f=open("s","w")
     f.write(s)
     f.close()
