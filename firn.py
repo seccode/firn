@@ -1,7 +1,3 @@
-from collections import Counter,defaultdict
-import numpy as np
-import random
-from tqdm import tqdm
 import zstandard as zstd
 
 def compress(s,comp):
@@ -49,7 +45,7 @@ def decompress(x, y):
     return " ".join(words).replace(chr(0),"  ")
 
 if __name__=="__main__":
-    s=open("dickens",encoding="latin-1").read()[20000:26000]
+    s=open("dickens",encoding="latin-1").read()[:80000]
     f=open("s","w")
     f.write(s)
     f.close()
