@@ -18,17 +18,17 @@ def compress(s,comp):
     x=x.replace("2"*18,"3")
     return comp.compress(x.encode()),comp.compress(" ".join(y).encode("utf-8","replace"))
 
-def decompress(x, y):
+def decompress(x,y):
     x=zstd.decompress(x).decode()
     y=zstd.decompress(y).decode("utf-8","replace").split(" ")
     mcw=open("dict").read().split("\n")[14:]
-    d={"0"*(i+1):m for i, m in enumerate(mcw)}
+    d={"0"*(i+1):m for i,m in enumerate(mcw)}
     x=x.replace("3","2"*18)
     x=x.replace("2","0"*16)
     words=[]
     i=0
     c=0
-    while i < len(x):
+    while i<len(x):
         if x[i]=="1":
             if c>0:
                 words.append(d["0"*c])
