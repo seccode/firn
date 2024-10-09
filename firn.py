@@ -1,66 +1,100 @@
+from collections import Counter
 import zstandard as zstd
 
 def compress(s,comp):
-    s=s.replace("  ",chr(0))
-    mcw=open("dict").read().split("\n")[14:]
-    d={m:"0"*(i+1) for i,m in enumerate(mcw)}
-    words=s.split(" ")
-    x=[]
-    y=[]
-    for word in words:
-        if word in d:
-            x.append(d[word])
-        else:
-            x.append("")
-            y.append(word)
-    x="1".join(x)
-    x=x.replace("0"*16,"2")
-    x=x.replace("2"*18,"3")
-    return comp.compress(x.encode()),comp.compress(" ".join(y).encode("utf-8","replace"))
+    # Get most common words from predefined dictionary
+    most_common_words=open("dict").read().split("\n")[14:]
+    most_common_words.remove("")
 
-def decompress(x,y):
-    x=zstd.decompress(x).decode()
-    y=zstd.decompress(y).decode("utf-8","replace").split(" ")
-    mcw=open("dict").read().split("\n")[14:]
-    d={"0"*(i+1):m for i,m in enumerate(mcw)}
-    x=x.replace("3","2"*18)
-    x=x.replace("2","0"*16)
+    # Use most common chars in text as symbols
+    symbols=[m[0] for m in Counter(s).most_common()]
+    symbols.remove(" ")
+    one_char_symbols=symbols[:]
+
+    # Add two char symbols
+    t=symbols[:]
+    for l0 in t:
+        for l1 in t:
+            symbols.append(l0+l1)
+
+    # Map most common words to symbols
+    d={word:symbol for word,symbol in zip(most_common_words,symbols)}
+    g=set(d.values())
+
+    # Replace words with symbols
+    words=s.split(" ")
+    new_words=[]
+    for word in words:
+        if word in d: # Replace with symbol
+            new_words.append(d[word])
+        elif word in g: # Word is a used symbol, add a marker
+            new_words.append(chr(0)+word)
+        else: # Default case, word is not common
+            new_words.append(word)
+
+    # To decompress, we need one char symbols and new words
+    v=chr(1114110).join([
+        "".join(one_char_symbols),
+        " ".join(new_words)
+    ])
+
+    # Return zstd compressed object
+    return comp.compress(v.encode("utf-8","replace"))
+
+def decompress(b):
+    # zstd decompress
+    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(1114110))
+    symbols=list(symbols)
+    new_words=new_words.split(" ")
+
+    # Get most common words from predefined dictionary
+    most_common_words=open("dict").read().split("\n")[14:]
+    most_common_words.remove("")
+
+    # Use most common chars in text as symbols
+    t=symbols[:]
+    for l0 in t:
+        for l1 in t:
+            symbols.append(l0+l1)
+
+    # Map most symbols to most common words
+    d={symbol:word for symbol,word in zip(symbols,most_common_words)}
+
+    # Replace symbols with original words
     words=[]
-    i=0
-    c=0
-    while i<len(x):
-        if x[i]=="1":
-            if c>0:
-                words.append(d["0"*c])
-            else:
-                words.append(y.pop(0))
-            c=0
-        elif x[i]=="0":
-            c+=1
-        i+=1
-    if c>0:
-        words.append(d["0"*c])
-    else:
-        words.append(y.pop())
-    return " ".join(words).replace(chr(0),"  ")
+    for word in new_words:
+        if word in d: # Symbol used, replace with original word
+            words.append(d[word])
+        elif len(word)>0 and word[0]==chr(0): # Marker
+            words.append(word[1:])
+        else: # Default case, word was not replaced
+            words.append(word)
+    return " ".join(words)
 
 if __name__=="__main__":
-    s=open("dickens",encoding="latin-1").read()[:40000]
+    # Read dickens
+    s=open("dickens",encoding="latin-1").read()[:40000] # Take first chunk of text
+
+    # Save chunk for testing with other compressors
     f=open("s","w")
     f.write(s)
     f.close()
-    comp=zstd.ZstdCompressor(level=22)
+
+    # Compress purely with zstd for comparison
+    comp=zstd.ZstdCompressor(level=22) # Use highest level 22
     _b=comp.compress(s.encode("utf-8","replace"))
-    f=open("1","wb")
-    f.write(_b)
-    f.close()
-    x,y=compress(s,comp)
+
+    # Compress with our custom algorithm
+    b=compress(s,comp)
+
+    # Print results
     print("\n************************************************")
-    print("Compressed "+str(len(s))+" bytes to "+str(len(x+y))+" bytes")
-    print(str(round(100*(len(_b)-len(x+y))/len(_b),2))+"% improvement over zstd")
+    print("Compressed "+str(len(s))+" bytes to "+str(len(b))+" bytes")
+    print(str(round(100*(len(_b)-len(b))/len(_b),2))+"% improvement over zstd")
     print("************************************************\n")
-    f=open("2","wb")
-    f.write(x+y)
-    f.close()
-    _s=decompress(x,y)
+
+    # Decompress with our custom algorithm
+    _s=decompress(b)
+
+    # Assert equality
     assert _s==s
