@@ -12,9 +12,8 @@ def compress(s,comp):
     one_char_symbols=symbols[:]
 
     # Add two char symbols
-    t=symbols[:]
-    for l0 in t:
-        for l1 in t:
+    for l0 in one_char_symbols:
+        for l1 in one_char_symbols:
             symbols.append(l0+l1)
 
     # Map most common words to symbols
@@ -73,7 +72,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[:40000] # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read()[:50000] # Take first chunk of text
 
     # Save chunk for testing with other compressors
     f=open("s","w")
