@@ -1,4 +1,7 @@
 from collections import Counter
+import numpy as np
+import pickle
+from sklearn.ensemble import RandomForestClassifier
 import zstandard as zstd
 
 def compress(s,comp):
@@ -7,7 +10,7 @@ def compress(s,comp):
     most_common_words.remove("")
 
     # Use most common chars in text as symbols
-    symbols=[m[0] for m in Counter(s).most_common()][:30]
+    symbols=[m[0] for m in Counter(s).most_common()][:35]
     symbols.remove(" ")
     one_char_symbols=symbols[:]
 
