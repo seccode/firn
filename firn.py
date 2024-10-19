@@ -7,7 +7,7 @@ def compress(s,comp):
     most_common_words.remove("")
 
     # Use most common chars in text as symbols
-    symbols=[m[0] for m in Counter(s).most_common()]
+    symbols=[m[0] for m in Counter(s).most_common()][:30]
     symbols.remove(" ")
     one_char_symbols=symbols[:]
 
@@ -15,6 +15,12 @@ def compress(s,comp):
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
             symbols.append(l0+l1)
+
+    # Add three char symbols
+    for l0 in one_char_symbols:
+        for l1 in one_char_symbols:
+            for l2 in one_char_symbols:
+                symbols.append(l0+l1+l2)
 
     # Map most common words to symbols
     d={word:symbol for word,symbol in zip(most_common_words,symbols)}
@@ -25,7 +31,11 @@ def compress(s,comp):
     new_words=[]
     for word in words:
         if word in d: # Replace with symbol
-            new_words.append(d[word])
+            _d=d[word]
+            if len(_d)==1:
+                new_words.append(_d)
+            else:
+                new_words.append(_d)
         elif word in g: # Word is a used symbol, add a marker
             new_words.append(chr(0)+word)
         else: # Default case, word is not common
@@ -34,7 +44,7 @@ def compress(s,comp):
     # To decompress, we need one char symbols and new words
     v=chr(1114110).join([
         "".join(one_char_symbols),
-        " ".join(new_words)
+        " ".join(new_words),
     ])
 
     # Return zstd compressed object
@@ -55,6 +65,12 @@ def decompress(b):
     for l0 in t:
         for l1 in t:
             symbols.append(l0+l1)
+
+    # Add three char symbols
+    for l0 in t:
+        for l1 in t:
+            for l2 in t:
+                symbols.append(l0+l1+l2)
 
     # Map most symbols to most common words
     d={symbol:word for symbol,word in zip(symbols,most_common_words)}
