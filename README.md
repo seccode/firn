@@ -4,7 +4,7 @@ granular snow, especially on the upper part of a glacier, where it has not yet b
 <img src="img.png" alt="firn" width="400">
 
 # How it works
-firn uses 1 byte char symbols and 2 char (1 byte each) symbols for dictionary replacement
+firn uses a subset of most common chars in the text as dictionary replacement symbols using 1, 2, and 3 char combinations
 
 # Limitations
 firn works well for file sizes under 100KB
