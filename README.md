@@ -13,4 +13,4 @@ Firn uses a subset of most common chars in the text as dictionary replacement sy
 | zstd (lvl 22) | 19,460                | -               |
 
 # Limitations
-firn works well for file sizes under 100KB
+Works well for file sizes under 100KB
