@@ -2,7 +2,7 @@ from collections import Counter
 import zstandard as zstd
 
 def compress(s,comp):
-    # Get most common words from predefined dictionary
+    # Get most common words
     words=s.split(" ")
     most_common_words=[m[0] for m in Counter(words).most_common() if m[1]>10]
     most_common_words.remove("")
