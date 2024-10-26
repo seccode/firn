@@ -14,6 +14,3 @@ Firn uses a subset of most common chars in the text as dictionary replacement sy
 
 # Limitations
 Works well for text-based files under 1MB
-
-# Further improvement
-Check new.py for development of new compression method, randomly sorting words to increase compression
