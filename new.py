@@ -1,20 +1,66 @@
-import random
+from collections import Counter
 import zstandard as zstd
 
 def compress(s,comp):
-    o=f=s.split(".")[1001].split(" ")
-    x=len(comp.compress(" ".join(f).encode("utf-8")))
-    print(x)
-    mn=x
-    for i in range(1_000):
-        f=o
-        random.seed(i)
-        random.shuffle(f)
-        x=len(comp.compress(" ".join(f).encode("utf-8")))
-        if x<mn:
-            mn=x
-            print(x)
-    a
+    # Get most common words from predefined dictionary
+    most_common_words=open("dict").read().split("\n")
+    most_common_words.remove("")
+
+    h={word:i for i,word in enumerate(most_common_words[:100])}
+    j={i:word for i,word in enumerate(most_common_words[:100])}
+
+    words=s.split(" ")
+    f={word:float("inf") for word in most_common_words}
+    for i in range(1,len(words)):
+        if words[i-1] in f and words[i] in h:
+            f[words[i-1]]=min(f[words[i-1]],h[words[i]])
+    new_words=[words[0]]
+    for i in range(1,len(words)):
+        if words[i-1] in f and words[i] in h and f[words[i-1]]!=float("inf"):
+            new_words.append(j[h[words[i]]-f[words[i-1]]])
+        else:
+            new_words.append(words[i])
+
+    # Use most common chars in text as symbols
+    symbols=[m[0] for m in Counter(s).most_common()][:35]
+    symbols.remove(" ")
+    one_char_symbols=symbols[:]
+
+    # Add two char symbols
+    for l0 in one_char_symbols:
+        for l1 in one_char_symbols:
+            symbols.append(l0+l1)
+
+    # Add three char symbols
+    for l0 in one_char_symbols:
+        for l1 in one_char_symbols:
+            for l2 in one_char_symbols:
+                symbols.append(l0+l1+l2)
+
+    # Map most common words to symbols
+    d={word:symbol for word,symbol in zip(most_common_words,symbols)}
+    g=set(d.values())
+
+    # Replace words with symbols
+    new_new_words=[]
+    for word in new_words:
+        if word in d: # Replace with symbol
+            _d=d[word]
+            if len(_d)==1:
+                new_new_words.append(_d)
+            else:
+                new_new_words.append(_d)
+        elif word in g: # Word is a used symbol, add a marker
+            new_new_words.append(chr(0)+word)
+        else: # Default case, word is not common
+            new_new_words.append(word)
+
+    # To decompress, we need one char symbols and new words
+    v=chr(300).join([
+        "".join(one_char_symbols),
+        " ".join(new_new_words),
+    ])
+
     # Return zstd compressed object
     return comp.compress(v.encode("utf-8","replace"))
 
@@ -56,7 +102,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[:1000000] # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read()[:50_000] # Take first chunk of text
 
     # Save chunk for testing with other compressors
     f=open("s","w")
