@@ -6,8 +6,8 @@ def compress(s,comp):
     most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
-    h={word:i for i,word in enumerate(most_common_words[:100])}
-    j={i:word for i,word in enumerate(most_common_words[:100])}
+    h={word:i for i,word in enumerate(most_common_words[:30000])}
+    j={i:word for i,word in enumerate(most_common_words[:30000])}
 
     words=s.split(" ")
     f={word:float("inf") for word in most_common_words}
