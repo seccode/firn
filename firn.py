@@ -6,7 +6,7 @@ import zstandard as zstd
 
 def compress(s,comp):
     # Get most common words from predefined dictionary
-    most_common_words=open("dict").read().split("\n")[14:]
+    most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
     # Use most common chars in text as symbols
@@ -45,7 +45,7 @@ def compress(s,comp):
             new_words.append(word)
 
     # To decompress, we need one char symbols and new words
-    v=chr(300).join([
+    v=chr(1).join([
         "".join(one_char_symbols),
         " ".join(new_words),
     ])
@@ -55,12 +55,12 @@ def compress(s,comp):
 
 def decompress(b):
     # zstd decompress
-    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(300))
+    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(1))
     symbols=list(symbols)
     new_words=new_words.split(" ")
 
     # Get most common words from predefined dictionary
-    most_common_words=open("dict").read().split("\n")[14:]
+    most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
     # Use most common chars in text as symbols
@@ -91,12 +91,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[:50000] # Take first chunk of text
-
-    # Save chunk for testing with other compressors
-    f=open("s","w")
-    f.write(s)
-    f.close()
+    s=open("dickens",encoding="latin-1").read()[:50_000] # Take first chunk of text
 
     # Compress purely with zstd for comparison
     comp=zstd.ZstdCompressor(level=22) # Use highest level 22
