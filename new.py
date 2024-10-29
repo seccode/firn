@@ -1,25 +1,33 @@
 from collections import Counter
 import zstandard as zstd
 
+N=20
+
 def compress(s,comp):
     # Get most common words from predefined dictionary
     most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
-    h={word:i for i,word in enumerate(most_common_words[:30000])}
-    j={i:word for i,word in enumerate(most_common_words[:30000])}
+    h={word:i for i,word in enumerate(most_common_words[:N])}
+    j={i:word for i,word in enumerate(most_common_words[:N])}
 
     words=s.split(" ")
-    f={word:float("inf") for word in most_common_words}
+    f={word:float("inf") for word in most_common_words[:N]}
     for i in range(1,len(words)):
-        if words[i-1] in f and words[i] in h:
+        if words[i-1] in h and words[i] in h:
             f[words[i-1]]=min(f[words[i-1]],h[words[i]])
     new_words=[words[0]]
     for i in range(1,len(words)):
-        if words[i-1] in f and words[i] in h and f[words[i-1]]!=float("inf"):
+        if words[i-1] in h and words[i] in h and f[words[i-1]]!=float("inf"):
             new_words.append(j[h[words[i]]-f[words[i-1]]])
         else:
             new_words.append(words[i])
+    x=[]
+    for v in f.values():
+        if v==float("inf"):
+            x.append(chr(0))
+        else:
+            x.append(chr(v))
 
     # Use most common chars in text as symbols
     symbols=[m[0] for m in Counter(s).most_common()][:35]
@@ -56,7 +64,8 @@ def compress(s,comp):
             new_new_words.append(word)
 
     # To decompress, we need one char symbols and new words
-    v=chr(300).join([
+    v=chr(1).join([
+        "".join(x),
         "".join(one_char_symbols),
         " ".join(new_new_words),
     ])
@@ -66,12 +75,12 @@ def compress(s,comp):
 
 def decompress(b):
     # zstd decompress
-    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(300))
+    x,symbols,new_new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(1))
     symbols=list(symbols)
-    new_words=new_words.split(" ")
+    new_new_words=new_new_words.split(" ")
 
     # Get most common words from predefined dictionary
-    most_common_words=open("dict").read().split("\n")[14:]
+    most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
     # Use most common chars in text as symbols
@@ -89,15 +98,29 @@ def decompress(b):
     # Map most symbols to most common words
     d={symbol:word for symbol,word in zip(symbols,most_common_words)}
 
-    # Replace symbols with original words
-    words=[]
-    for word in new_words:
+    new_words=[]
+    for word in new_new_words:
         if word in d: # Symbol used, replace with original word
-            words.append(d[word])
-        elif len(word)>0 and word[0]==chr(0): # Marker
-            words.append(word[1:])
+            new_words.append(d[word])
+        elif len(word)>0 and word[0]==chr(0): # Marker for used symbol
+            new_words.append(word[1:])
         else: # Default case, word was not replaced
-            words.append(word)
+            new_words.append(word)
+
+    h={word:i for i,word in enumerate(most_common_words[:N])}
+    j={i:word for i,word in enumerate(most_common_words[:N])}
+
+    f={}
+    for i,_x in enumerate(x):
+        if _x!=chr(0):
+            f[j[i]]=ord(_x)
+
+    words=[new_words[0]]
+    for i in range(1,len(new_words)):
+        if words[-1] in h and new_words[i] in h:
+            words.append(j[f[words[-1]]+h[new_words[i]]])
+        else:
+            words.append(new_words[i])
     return " ".join(words)
 
 if __name__=="__main__":
