@@ -102,7 +102,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[:50_000] # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read()[:30_000] # Take first chunk of text
 
     # Save chunk for testing with other compressors
     f=open("s","w")
