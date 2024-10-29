@@ -42,7 +42,7 @@ def compress(s,comp):
             new_words.append(word)
 
     # To decompress, we need one char symbols and new words
-    v=chr(300).join([
+    v=chr(1).join([
         "".join(one_char_symbols),
         " ".join(new_words),
         " ".join(most_common_words),
@@ -53,7 +53,7 @@ def compress(s,comp):
 
 def decompress(b):
     # zstd decompress
-    symbols,new_words,most_common_words=zstd.decompress(b).decode("utf-8","replace").split(chr(300))
+    symbols,new_words,most_common_words=zstd.decompress(b).decode("utf-8","replace").split(chr(1))
     symbols=list(symbols)
     most_common_words=most_common_words.split(" ")
     new_words=new_words.split(" ")
