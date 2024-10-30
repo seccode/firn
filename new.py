@@ -1,7 +1,8 @@
 from collections import Counter,defaultdict
 import zlib
+import zstandard as zstd
 
-def compress(s):
+def compress(s,comp):
     most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
     g=set(most_common_words)
@@ -13,14 +14,20 @@ def compress(s):
     h={}
     x=[]
     for word in words:
-        if word in g and any(c in word for c in j):
+        if (word in g or word[:-1] in g) and any(c in word for c in j):
             w=word
             for _j in j:
                 w=w.replace(_j,"")
-            if word not in h:
-                h[word]=len(d[w])
-            x.append(chr(h[word]+1))
-            d[w].add(word)
+            if word in g:
+                if word not in h:
+                    h[word]=len(d[w])
+                x.append(chr(h[word]+1))
+                d[w].add(word)
+            else:
+                if word[:-1] not in h:
+                    h[word[:-1]]=len(d[w])
+                x.append(chr(h[word[:-1]]+1))
+                d[w].add(word[:-1])
             new_words.append(w)
         else:
             new_words.append(word)
@@ -28,6 +35,7 @@ def compress(s):
         " ".join(new_words).replace("  ",chr(0)),
         "".join(x)
     ])
+    #return zlib.compress(v.encode("utf-8"),level=9)
     return zlib.compress(v.encode("utf-8"),level=9)
 
 def decompress(b):
@@ -37,16 +45,17 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[:10_000_000] # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read() # Take first chunk of text
 
     f=open("s","w")
     f.write(s)
     f.close()
 
+    comp=zstd.ZstdCompressor(level=22)
     _b=zlib.compress(s.encode("utf-8","replace"),level=9)
 
     # Compress with our custom algorithm
-    b=compress(s)
+    b=compress(s,comp)
 
     # Print results
     print("\n************************************************")
