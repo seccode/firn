@@ -14,7 +14,7 @@ def compress(s,comp):
     h={}
     x=[]
     for word in words:
-        if (word in g or word[:-1] in g) and any(c in word for c in j):
+        if (word in g or word[:-1] in g or word[1:] in g) and any(c in word for c in j):
             w=word
             for _j in j:
                 w=w.replace(_j,"")
@@ -23,16 +23,22 @@ def compress(s,comp):
                     h[word]=len(d[w])
                 x.append(chr(h[word]+1))
                 d[w].add(word)
-            else:
+            elif word[:-1] in g:
                 if word[:-1] not in h:
                     h[word[:-1]]=len(d[w])
                 x.append(chr(h[word[:-1]]+1))
                 d[w].add(word[:-1])
+            else:
+                if word[1:] not in h:
+                    h[word[1:]]=len(d[w])
+                x.append(chr(h[word[1:]]+1))
+                d[w].add(word[1:])
             new_words.append(w)
         else:
             new_words.append(word)
+    n=" ".join(new_words).replace("  ",chr(0))
     v=chr(0).join([
-        " ".join(new_words).replace("  ",chr(0)),
+        n,
         "".join(x)
     ])
     #return zlib.compress(v.encode("utf-8"),level=9)
@@ -45,7 +51,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read() # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read()[:1_000_000] # Take first chunk of text
 
     f=open("s","w")
     f.write(s)
