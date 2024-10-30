@@ -10,7 +10,7 @@ def compress(s,comp):
     words=s.split(" ")
     new_words=[]
     d=defaultdict(set)
-    j=set([m[0] for m in Counter(s).most_common()][:28])
+    j=set([m[0] for m in Counter(s).most_common()][:30])
     h={}
     x=[]
     for word in words:
@@ -34,15 +34,50 @@ def compress(s,comp):
                 x.append(chr(h[word[1:]]+1))
                 d[w].add(word[1:])
             new_words.append(w)
+        elif word.count("\n")==1:
+            l=word.split("\n")
+            word0=l[0]
+            word1=l[0]
+            y=""
+            if (word0 in g or word[:-1] in g) and any(c in word0 for c in j):
+                w=word0
+                for _j in j:
+                    w=w.replace(_j,"")
+                if word0 in g:
+                    if word0 not in h:
+                        h[word0]=len(d[w])
+                    x.append(chr(h[word0]+1))
+                    d[w].add(word0)
+                else:
+                    if word0[:-1] not in h:
+                        h[word0[:-1]]=len(d[w])
+                    x.append(chr(h[word0[:-1]]+1))
+                    d[w].add(word0[:-1])
+                y+=w
+            else:
+                y+=word0
+            y+="\n"
+            if word1 in g and any(c in word1 for c in j):
+                w=word1
+                for _j in j:
+                    w=w.replace(_j,"")
+                if word1 not in h:
+                    h[word1]=len(d[w])
+                x.append(chr(h[word1]+1))
+                d[w].add(word1)
+                y+=w
+            else:
+                y+=word1
+            new_words.append(y)
         else:
             new_words.append(word)
-    n=" ".join(new_words).replace("  ",chr(0))
+
     v=chr(0).join([
-        n,
+        " ".join(new_words).replace("  ",chr(0)),
         "".join(x)
     ])
     #return zlib.compress(v.encode("utf-8"),level=9)
-    return zlib.compress(v.encode("utf-8"),level=9)
+    return comp.compress(v.encode("utf-8"))
 
 def decompress(b):
     new_words=zlib.decompress(b).decode("utf-8")
@@ -51,7 +86,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[:1_000_000] # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read() # Take first chunk of text
 
     f=open("s","w")
     f.write(s)
