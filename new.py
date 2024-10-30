@@ -79,8 +79,9 @@ def compress(s,comp):
         else:
             new_words.append(word)
 
-    mc=[m[0] for m in Counter(new_words).most_common() if m[1]>3]
-    sym=[m[0] for m in Counter(s).most_common()][:40]
+    mc=[m[0] for m in Counter(new_words).most_common() if m[1]>5]
+    sym=[m[0] for m in Counter(s).most_common()][:60]
+    sym.remove(" ")
     t=sym[:]
     for l0 in t:
         for l1 in t:
@@ -97,15 +98,17 @@ def compress(s,comp):
     for word in new_words:
         if word in d:
             new_new_words.append(d[word])
+        elif word[:-1] in d:
+            new_new_words.append(d[word[:-1]]+word[-1])
         else:
             new_new_words.append(word)
-    v=chr(0).join([
+    v=chr(256).join([
         " ".join(d.keys()),
         " ".join(new_new_words).replace("    ",chr(0)),
         "".join(x)
     ])
-    return zlib.compress(v.encode("utf-8"),level=9)
     #return comp.compress(v.encode("utf-8","replace"))
+    return zlib.compress(v.encode("utf-8","replace"),level=-1)
 
 def decompress(b):
     new_words=zlib.decompress(b).decode("utf-8")
