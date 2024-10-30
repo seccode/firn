@@ -1,7 +1,6 @@
 from collections import Counter,defaultdict
 import time
 from tqdm import tqdm
-import zlib
 import zstandard as zstd
 
 def compress(s,comp):
@@ -100,7 +99,7 @@ if __name__=="__main__":
     f.close()
 
     comp=zstd.ZstdCompressor(level=22)
-    _b=zlib.compress(s.encode("utf-8","replace"),level=9)
+    _b=comp.compress(s.encode("utf-8","replace"))
 
     # Compress with our custom algorithm
     b=compress(s,comp)
