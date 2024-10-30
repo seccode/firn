@@ -1,6 +1,7 @@
 from collections import Counter,defaultdict
 import time
 from tqdm import tqdm
+import zlib
 import zstandard as zstd
 
 def compress(s,comp):
@@ -78,12 +79,33 @@ def compress(s,comp):
         else:
             new_words.append(word)
 
+    mc=[m[0] for m in Counter(new_words).most_common() if m[1]>3]
+    sym=[m[0] for m in Counter(s).most_common()][:40]
+    t=sym[:]
+    for l0 in t:
+        for l1 in t:
+            sym.append(l0+l1)
+    d={}
+    j=0
+    for i in range(len(mc)):
+        if j==len(sym):
+            break
+        if len(mc[i])>len(sym[j]):
+            d[mc[i]]=sym[j]
+            j+=1
+    new_new_words=[]
+    for word in new_words:
+        if word in d:
+            new_new_words.append(d[word])
+        else:
+            new_new_words.append(word)
     v=chr(0).join([
-        " ".join(new_words).replace("  ",chr(0)),
+        " ".join(d.keys()),
+        " ".join(new_new_words).replace("    ",chr(0)),
         "".join(x)
     ])
-    #return zlib.compress(v.encode("utf-8"),level=9)
-    return comp.compress(v.encode("utf-8","replace"))
+    return zlib.compress(v.encode("utf-8"),level=9)
+    #return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
     new_words=zlib.decompress(b).decode("utf-8")
@@ -92,14 +114,15 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()
+    s=open("dickens",encoding="latin-1").read()[:1_000_000]
 
     f=open("s","w")
     f.write(s)
     f.close()
 
     comp=zstd.ZstdCompressor(level=22)
-    _b=comp.compress(s.encode("utf-8","replace"))
+    #_b=comp.compress(s.encode("utf-8","replace"))
+    _b=zlib.compress(s.encode("utf-8"),level=9)
 
     # Compress with our custom algorithm
     b=compress(s,comp)
