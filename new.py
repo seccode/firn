@@ -1,10 +1,11 @@
 from collections import Counter,defaultdict
+import time
+from tqdm import tqdm
 import zlib
 import zstandard as zstd
 
 def compress(s,comp):
     most_common_words=open("dict").read().split("\n")
-    most_common_words.remove("")
     g=set(most_common_words)
 
     words=s.split(" ")
@@ -13,7 +14,7 @@ def compress(s,comp):
     j=set([m[0] for m in Counter(s).most_common()][:30])
     h={}
     x=[]
-    for word in words:
+    for word in tqdm(words):
         if (word in g or word[:-1] in g or word[1:] in g) and any(c in word for c in j):
             w=word
             for _j in j:
@@ -39,7 +40,7 @@ def compress(s,comp):
             word0=l[0]
             word1=l[0]
             y=""
-            if (word0 in g or word[:-1] in g) and any(c in word0 for c in j):
+            if (word0 in g or word0[:-1] in g) and any(c in word0 for c in j):
                 w=word0
                 for _j in j:
                     w=w.replace(_j,"")
@@ -57,14 +58,20 @@ def compress(s,comp):
             else:
                 y+=word0
             y+="\n"
-            if word1 in g and any(c in word1 for c in j):
+            if (word1 in g or word1[:-1] in g) and any(c in word1 for c in j):
                 w=word1
                 for _j in j:
                     w=w.replace(_j,"")
-                if word1 not in h:
-                    h[word1]=len(d[w])
-                x.append(chr(h[word1]+1))
-                d[w].add(word1)
+                if word1 in g:
+                    if word1 not in h:
+                        h[word1]=len(d[w])
+                    x.append(chr(h[word1]+1))
+                    d[w].add(word1)
+                else:
+                    if word1[:-1] not in h:
+                        h[word1[:-1]]=len(d[w])
+                    x.append(chr(h[word1[:-1]]+1))
+                    d[w].add(word1[:-1])
                 y+=w
             else:
                 y+=word1
@@ -77,7 +84,7 @@ def compress(s,comp):
         "".join(x)
     ])
     #return zlib.compress(v.encode("utf-8"),level=9)
-    return comp.compress(v.encode("utf-8"))
+    return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
     new_words=zlib.decompress(b).decode("utf-8")
@@ -86,7 +93,7 @@ def decompress(b):
 
 if __name__=="__main__":
     # Read dickens
-    s=open("dickens",encoding="latin-1").read() # Take first chunk of text
+    s=open("dickens",encoding="latin-1").read()
 
     f=open("s","w")
     f.write(s)
