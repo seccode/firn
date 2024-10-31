@@ -2,7 +2,7 @@ from collections import Counter
 import zlib
 import zstandard as zstd
 
-SEP={",",".",";","?","!"}
+SEP={",",".",";","?","!","\n"}
 
 def compress(s,comp):
     # Get most common words from predefined dictionary
@@ -36,7 +36,6 @@ def compress(s,comp):
     # Replace words with symbols
     words=s.split(" ")
     new_words=[]
-    m=[]
     for i,word in enumerate(words):
         if word in d: # Replace with symbol
             new_words.append(d[word])
@@ -48,13 +47,11 @@ def compress(s,comp):
             new_words.append(chr(1)+word)
         else: # Default case, word is not common
             new_words.append(word)
-        if word[1:] in d:
-            m.append(ord(word[0]))
 
     # To decompress, we need one char symbols and new words
     v=chr(2).join([
         "".join(one_char_symbols),
-        " ".join(new_words),
+        " ".join(new_words)
     ])
 
     # Return zstd compressed object
