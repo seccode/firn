@@ -15,5 +15,3 @@ Firn uses a subset of most common chars in the text as dictionary replacement sy
 # Limitations
 Works well for text-based files under 500KB
 
-# new.py
-Check this file for research into further state of the art compression development
