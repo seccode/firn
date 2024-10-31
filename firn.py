@@ -2,6 +2,8 @@ from collections import Counter
 import zlib
 import zstandard as zstd
 
+SEP={",",".",";","?","!"}
+
 def compress(s,comp):
     # Get most common words from predefined dictionary
     most_common_words=open("dict").read().split("\n")
@@ -15,7 +17,7 @@ def compress(s,comp):
     # Add two char symbols
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
-            if l1 in {",",".",";"}:
+            if l1 in SEP:
                 continue
             symbols.append(l0+l1)
 
@@ -23,7 +25,7 @@ def compress(s,comp):
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
             for l2 in one_char_symbols:
-                if l2 in {",",".",";"}:
+                if l2 in SEP:
                     continue
                 symbols.append(l0+l1+l2)
 
@@ -34,17 +36,20 @@ def compress(s,comp):
     # Replace words with symbols
     words=s.split(" ")
     new_words=[]
+    m=[]
     for i,word in enumerate(words):
         if word in d: # Replace with symbol
             new_words.append(d[word])
-        elif word[:-1] in d and word[-1] in {",",".",";"}:
+        elif word[:-1] in d and word[-1] in SEP:
             new_words.append(d[word[:-1]]+word[-1])
         elif word in g: # Word is a used symbol, add a marker
             new_words.append(chr(0)+word)
-        elif word[:-1] in g and word[-1] in {",",".",";"}:
+        elif word[:-1] in g and word[-1] in SEP:
             new_words.append(chr(1)+word)
         else: # Default case, word is not common
             new_words.append(word)
+        if word[1:] in d:
+            m.append(ord(word[0]))
 
     # To decompress, we need one char symbols and new words
     v=chr(2).join([
@@ -71,7 +76,7 @@ def decompress(b):
     t=symbols[:]
     for l0 in t:
         for l1 in t:
-            if l1 in {",",".",";"}:
+            if l1 in SEP:
                 continue
             symbols.append(l0+l1)
 
@@ -79,7 +84,7 @@ def decompress(b):
     for l0 in t:
         for l1 in t:
             for l2 in t:
-                if l2 in {",",".",";"}:
+                if l2 in SEP:
                     continue
                 symbols.append(l0+l1+l2)
 
@@ -91,7 +96,7 @@ def decompress(b):
     for word in new_words:
         if word in d: # Symbol used, replace with original word
             words.append(d[word])
-        elif word[:-1] in d and word[-1] in {",",".",";"}:
+        elif word[:-1] in d and word[-1] in SEP:
             words.append(d[word[:-1]]+word[-1])
         elif len(word)>0 and word[0]==chr(0): # Marker
             words.append(word[1:])
