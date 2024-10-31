@@ -87,42 +87,8 @@ def compress(s,comp):
     return zlib.compress(v.encode("utf-8","replace"),level=-1)
 
 def decompress(b):
-    d_keys,new_new_words,x,t,m,z,q,sym=zlib.decompress(b).decode("utf-8").split(chr(600))
-    new_new_words=new_new_words.replace(chr(0),"    ").split(" ")
-    sym=list(sym)
-    z=list(z)
-    q=list(q)
-    t=sym[:]
-    for l0 in t:
-        for l1 in t:
-            sym.append(l0+l1)
-    mc=d_keys.split(" ")
-    d={}
-    j=0
-    for i in range(len(mc)):
-        if j==len(sym):
-            break
-        if len(mc[i])>len(sym[j]):
-            d[sym[j]]=mc[i]
-            j+=1
-    new_words=[]
-    l=0
-    r=0
-    for i,word in enumerate(new_new_words):
-        if len(z)>0 and chr(i-l)==z[0]:
-            new_words.append(word)
-            z.pop(0)
-            l=i
-        elif len(q)>0 and chr(i-r)==q[0]:
-            new_words.append(d[word[:-1]]+word[-1])
-            q.pop(0)
-            r=i
-        elif word in d:
-            new_words.append(d[word])
-        else:
-            new_words.append(word)
     words=[]
-    return new_words
+    return words
 
 if __name__=="__main__":
     # Read dickens
@@ -147,8 +113,6 @@ if __name__=="__main__":
 
     # Decompress with the custom algorithm
     _s=decompress(b)
-    assert _s==n
-    a
 
     # Assert equality
     assert _s==s
