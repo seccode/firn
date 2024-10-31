@@ -1,7 +1,5 @@
 from collections import Counter
-import numpy as np
-import pickle
-from sklearn.ensemble import RandomForestClassifier
+import zlib
 import zstandard as zstd
 
 def compress(s,comp):
@@ -17,12 +15,16 @@ def compress(s,comp):
     # Add two char symbols
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
+            if l1 in {",",".",";"}:
+                continue
             symbols.append(l0+l1)
 
     # Add three char symbols
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
             for l2 in one_char_symbols:
+                if l2 in {",",".",";"}:
+                    continue
                 symbols.append(l0+l1+l2)
 
     # Map most common words to symbols
@@ -32,30 +34,32 @@ def compress(s,comp):
     # Replace words with symbols
     words=s.split(" ")
     new_words=[]
-    for word in words:
+    for i,word in enumerate(words):
         if word in d: # Replace with symbol
-            _d=d[word]
-            if len(_d)==1:
-                new_words.append(_d)
-            else:
-                new_words.append(_d)
+            new_words.append(d[word])
+        elif word[:-1] in d and word[-1] in {",",".",";"}:
+            new_words.append(d[word[:-1]]+word[-1])
         elif word in g: # Word is a used symbol, add a marker
             new_words.append(chr(0)+word)
+        elif word[:-1] in g and word[-1] in {",",".",";"}:
+            new_words.append(chr(1)+word)
         else: # Default case, word is not common
             new_words.append(word)
 
     # To decompress, we need one char symbols and new words
-    v=chr(1).join([
+    v=chr(2).join([
         "".join(one_char_symbols),
         " ".join(new_words),
     ])
 
     # Return zstd compressed object
+    #return zlib.compress(v.encode("utf-8","replace"),level=-1)
     return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
     # zstd decompress
-    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(1))
+    #symbols,new_words=zlib.decompress(b).decode("utf-8","replace").split(chr(2))
+    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(2))
     symbols=list(symbols)
     new_words=new_words.split(" ")
 
@@ -67,12 +71,16 @@ def decompress(b):
     t=symbols[:]
     for l0 in t:
         for l1 in t:
+            if l1 in {",",".",";"}:
+                continue
             symbols.append(l0+l1)
 
     # Add three char symbols
     for l0 in t:
         for l1 in t:
             for l2 in t:
+                if l2 in {",",".",";"}:
+                    continue
                 symbols.append(l0+l1+l2)
 
     # Map most symbols to most common words
@@ -83,7 +91,11 @@ def decompress(b):
     for word in new_words:
         if word in d: # Symbol used, replace with original word
             words.append(d[word])
+        elif word[:-1] in d and word[-1] in {",",".",";"}:
+            words.append(d[word[:-1]]+word[-1])
         elif len(word)>0 and word[0]==chr(0): # Marker
+            words.append(word[1:])
+        elif len(word)>0 and word[0]==chr(1): # Marker
             words.append(word[1:])
         else: # Default case, word was not replaced
             words.append(word)
@@ -93,8 +105,12 @@ if __name__=="__main__":
     # Read dickens
     s=open("dickens",encoding="latin-1").read()[:50_000] # Take first chunk of text
 
-    # Compress purely with zstd for comparison
-    comp=zstd.ZstdCompressor(level=22) # Use highest level 22
+    f=open("s","w")
+    f.write(s)
+    f.close()
+
+    comp=zstd.ZstdCompressor(level=22)
+    #_b=zlib.compress(s.encode("utf-8","replace"),level=-1)
     _b=comp.compress(s.encode("utf-8","replace"))
 
     # Compress with our custom algorithm
@@ -103,7 +119,7 @@ if __name__=="__main__":
     # Print results
     print("\n************************************************")
     print("Compressed "+str(len(s))+" bytes to "+str(len(b))+" bytes")
-    print(str(round(100*(len(_b)-len(b))/len(_b),2))+"% improvement over zstd")
+    print(str(round(100*(len(_b)-len(b))/len(_b),2))+"% improvement")
     print("************************************************\n")
 
     # Decompress with our custom algorithm
