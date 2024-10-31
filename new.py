@@ -12,10 +12,12 @@ def compress(s,comp):
     h={}
     words=s.split(" ")
     new_words=[]
-    c=set([m[0] for m in Counter(s).most_common()][:20])
+    c=set([m[0] for m in Counter(s).most_common()][:40])
     x=[]
+    t=[]
+    l=0
     for i,word in tqdm(enumerate(words),total=len(words)):
-        if (word in g) and any(c in word for c in c):
+        if (word in g or word[:-1] in g) and any(c in word for c in c):
             w=word
             for _c in c:
                 w=w.replace(_c,"")
@@ -29,6 +31,8 @@ def compress(s,comp):
                     h[word[:-1]]=len(d[w])
                 d[w].add(word[:-1])
                 x.append(chr(h[word[:-1]]+1))
+                t.append(chr(i-l))
+                l=i
             new_words.append(w)
         elif word.count("\n")==1:
             wi=word.split("\n")
@@ -77,6 +81,7 @@ def compress(s,comp):
     v=chr(0).join([
         " ".join(new_words),
         "".join(x),
+        "".join(t)
     ])
     #return comp.compress(v.encode("utf-8"))
     return zlib.compress(v.encode("utf-8","replace"),level=-1)
