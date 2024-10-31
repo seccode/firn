@@ -9,7 +9,7 @@ Firn uses a subset of most common chars in the text as dictionary replacement sy
 # Results on 50KB of dickens text
 | Compressor | Compressed Size (Bytes) | Improvement (%) |
 |------------|--------------------------|-----------------|
-| Firn + zstd (lvl 22)       | 16,843                   | **13.45%**        |
+| Firn + zstd (lvl 22)       | 16,828                   | **13.53%**        |
 | zstd (lvl 22) | 19,460                | -               |
 
 # Limitations
