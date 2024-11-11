@@ -10,7 +10,7 @@ Firn uses a subset of most common chars in the text as dictionary replacement sy
 | Compressor | Compressed Size (Bytes) | Improvement (%) |
 |------------|--------------------------|-----------------|
 | Firn + zstd (level 1)       | 18,730                   | **13.15%**        |
-| zstd (level ) | 21,565                | -               |
+| zstd (level 1) | 21,565                | -               |
 
 # Limitations
 Works well for text-based files under 5MB
