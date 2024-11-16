@@ -6,11 +6,31 @@ SEP={",",".",";","?","!","\n"}
 
 def compress(s,comp):
     # Get most common words from predefined dictionary
+    most_common_words=open("dict2").read().split("\n")
     most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
     # Use most common chars in text as symbols
-    symbols=[m[0] for m in Counter(s).most_common()][:35]
+    mc=[m[0] for m in Counter(s).most_common()]
+    g=set(mc)
+    i=0
+    C0,C1,C2=None,None,None
+    while i<256:
+        c=chr(i)
+        if c not in g:
+            if not C0:
+                C0=c
+            elif not C1:
+                C1=c
+            elif not C2:
+                C2=c
+            else:
+                break
+        i+=1
+    if not any([C0,C1,C2]):
+        return comp.compress(s.encode("utf-8","replace"))
+
+    symbols=mc[:35]
     symbols.remove(" ")
     one_char_symbols=symbols[:]
 
@@ -42,16 +62,17 @@ def compress(s,comp):
         elif word[:-1] in d and word[-1] in SEP:
             new_words.append(d[word[:-1]]+word[-1])
         elif word in g: # Word is a used symbol, add a marker
-            new_words.append(chr(0)+word)
+            new_words.append(C0+word)
         elif word[:-1] in g and word[-1] in SEP:
-            new_words.append(chr(1)+word)
+            new_words.append(C1+word)
         else: # Default case, word is not common
             new_words.append(word)
 
     # To decompress, we need one char symbols and new words
-    v=chr(2).join([
+    v=C2.join([
+        C0+C1,
         "".join(one_char_symbols),
-        " ".join(new_words)
+        " ".join(new_words),
     ])
 
     # Return zstd compressed object
@@ -60,8 +81,9 @@ def compress(s,comp):
 
 def decompress(b):
     # zstd decompress
-    #symbols,new_words=zlib.decompress(b).decode("utf-8","replace").split(chr(2))
-    symbols,new_words=zstd.decompress(b).decode("utf-8","replace").split(chr(2))
+    d=zstd.decompress(b).decode("utf-8","replace")
+    C0,C1,C2=d[0],d[1],d[2]
+    symbols,new_words=d[3:].split(C2)
     symbols=list(symbols)
     new_words=new_words.split(" ")
 
@@ -95,9 +117,9 @@ def decompress(b):
             words.append(d[word])
         elif word[:-1] in d and word[-1] in SEP:
             words.append(d[word[:-1]]+word[-1])
-        elif len(word)>0 and word[0]==chr(0): # Marker
+        elif len(word)>0 and word[0]==C0: # Marker
             words.append(word[1:])
-        elif len(word)>0 and word[0]==chr(1): # Marker
+        elif len(word)>0 and word[0]==C1: # Marker
             words.append(word[1:])
         else: # Default case, word was not replaced
             words.append(word)
@@ -111,7 +133,7 @@ if __name__=="__main__":
     f.write(s)
     f.close()
 
-    comp=zstd.ZstdCompressor(level=22)
+    comp=zstd.ZstdCompressor(level=1)
     #_b=zlib.compress(s.encode("utf-8","replace"),level=-1)
     _b=comp.compress(s.encode("utf-8","replace"))
 
