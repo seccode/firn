@@ -6,7 +6,6 @@ SEP={",",".",";","?","!","\n"}
 
 def compress(s,comp):
     # Get most common words from predefined dictionary
-    most_common_words=open("dict2").read().split("\n")
     most_common_words=open("dict").read().split("\n")
     most_common_words.remove("")
 
@@ -14,7 +13,7 @@ def compress(s,comp):
     mc=[m[0] for m in Counter(s).most_common()]
     g=set(mc)
     i=0
-    C0,C1,C2=None,None,None
+    C0,C1=None,None
     while i<256:
         c=chr(i)
         if c not in g:
@@ -22,12 +21,10 @@ def compress(s,comp):
                 C0=c
             elif not C1:
                 C1=c
-            elif not C2:
-                C2=c
             else:
                 break
         i+=1
-    if not any([C0,C1,C2]):
+    if not any([C0,C1]):
         return comp.compress(s.encode("utf-8","replace"))
 
     symbols=mc[:35]
@@ -64,13 +61,13 @@ def compress(s,comp):
         elif word in g: # Word is a used symbol, add a marker
             new_words.append(C0+word)
         elif word[:-1] in g and word[-1] in SEP:
-            new_words.append(C1+word)
+            new_words.append(C0+word)
         else: # Default case, word is not common
             new_words.append(word)
 
     # To decompress, we need one char symbols and new words
-    v=C2.join([
-        C0+C1,
+    v=C1.join([
+        C0,
         "".join(one_char_symbols),
         " ".join(new_words),
     ])
@@ -82,8 +79,8 @@ def compress(s,comp):
 def decompress(b):
     # zstd decompress
     d=zstd.decompress(b).decode("utf-8","replace")
-    C0,C1,C2=d[0],d[1],d[2]
-    symbols,new_words=d[3:].split(C2)
+    C0,C1=d[0],d[1]
+    symbols,new_words=d[2:].split(C1)
     symbols=list(symbols)
     new_words=new_words.split(" ")
 
@@ -119,7 +116,7 @@ def decompress(b):
             words.append(d[word[:-1]]+word[-1])
         elif len(word)>0 and word[0]==C0: # Marker
             words.append(word[1:])
-        elif len(word)>0 and word[0]==C1: # Marker
+        elif len(word)>0 and word[0]==C0 and word[-1] in SEP: # Marker
             words.append(word[1:])
         else: # Default case, word was not replaced
             words.append(word)
