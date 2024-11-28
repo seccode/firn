@@ -129,12 +129,16 @@ if __name__=="__main__":
     args=parser.parse_args()
 
     # Read dickens
-    s=open(args.f,encoding=args.e).read()[50_000:100_000] # Take first chunk of text
+    s=open(args.f,encoding=args.e).read()[:50_000] # Take first chunk of text
 
     comp=zstd.ZstdCompressor(level=1)
 
     # Compress with our custom algorithm
     b=compress(s,comp)
+
+    f=open("compressed","wb")
+    f.write(b)
+    f.close()
 
     # Decompress with our custom algorithm
     _s=decompress(b)
