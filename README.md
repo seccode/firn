@@ -15,7 +15,7 @@ python firn.py --f <file> --e <encoding>
 ```
 
 # How it works
-Firn uses a subset of most common chars in the text as dictionary replacement symbols using 1, 2, and 3 char combinations. By restricting the replacement chars to a subset of chars present in the text, we improve compression.
+Firn uses a subset of most common chars in the text as dictionary replacement symbols using 1, 2, and 3 char combinations. By restricting the replacement chars to a subset of chars present in the text, compression is improved.
 
 # Results on 50KB of dickens text
 | Compressor | Compressed Size (Bytes) | Improvement (%) |
