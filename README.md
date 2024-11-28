@@ -5,7 +5,7 @@ I stand on the shoulders of giants; I would like to acknowledge the following pe
 - Yann Collet (FSE)
 
 ## Firn, definition:
-granular snow, especially on the upper part of a glacier, where it has not yet been _compressed_ into ice.
+Granular snow, especially on the upper part of a glacier, where it has not yet been _compressed_ into ice.
 
 <img src="img.png" alt="firn" width="400">
 
