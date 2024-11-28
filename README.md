@@ -24,5 +24,5 @@ Firn uses a subset of most common chars in the text as dictionary replacement sy
 | zstd (level 1, with dictionary trained on enwik9) | 21,565                | -               |
 
 # Limitations
-Works well for text-based files under 5MB
+Works well for readable text-based files under 5MB
 
