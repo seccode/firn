@@ -133,7 +133,7 @@ if __name__=="__main__":
 
     comp=zstd.ZstdCompressor(level=1)
 
-    # Compress with our custom algorithm
+    # Compress with custom algorithm
     b=compress(s,comp)
 
     f=open("compressed","wb")
