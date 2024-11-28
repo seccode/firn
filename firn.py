@@ -1,5 +1,4 @@
 import argparse
-from charset_normalizer import detect
 from collections import Counter
 import zstandard as zstd
 
@@ -28,6 +27,7 @@ def compress(s,comp):
     if not any([C0,C1]):
         return comp.compress(s.encode("utf-8","replace"))
 
+    # Take 35 most common chars
     symbols=mc[:35]
     symbols.remove(" ")
     one_char_symbols=symbols[:]
@@ -79,6 +79,7 @@ def compress(s,comp):
 def decompress(b):
     # zstd decompress
     d=zstd.decompress(b).decode("utf-8","replace")
+    
     C0,C1=d[0],d[1]
     symbols,new_words=d[2:].split(C1)
     symbols=list(symbols)
@@ -128,7 +129,6 @@ if __name__=="__main__":
     parser.add_argument("--e",help="Encoding")
     args=parser.parse_args()
 
-    # Read dickens
     s=open(args.f,encoding=args.e).read()[:50_000] # Take first chunk of text
 
     comp=zstd.ZstdCompressor(level=1)
