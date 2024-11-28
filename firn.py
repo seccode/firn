@@ -61,7 +61,7 @@ def compress(s,comp):
         elif word in g: # Word is a used symbol, add a marker
             new_words.append(C0+word)
         elif word[:-1] in g and word[-1] in SEP:
-            new_words.append(C0+word)
+            new_words.append(word+C0)
         else: # Default case, word is not common
             new_words.append(word)
 
@@ -116,8 +116,8 @@ def decompress(b):
             words.append(d[word[:-1]]+word[-1])
         elif len(word)>0 and word[0]==C0: # Marker
             words.append(word[1:])
-        elif len(word)>0 and word[0]==C0 and word[-1] in SEP: # Marker
-            words.append(word[1:])
+        elif len(word)>1 and word[-1]==C0 and word[-2] in SEP: # Marker
+            words.append(word[:-1])
         else: # Default case, word was not replaced
             words.append(word)
     return " ".join(words)
