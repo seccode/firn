@@ -14,7 +14,7 @@ def compress(s,comp):
     g=set(mc)
     i=0
     C0,C1=None,None
-    while i<256:
+    while i<65_536:
         c=chr(i)
         if c not in g:
             if not C0:
