@@ -1,15 +1,9 @@
 import argparse
-import chardet
+from charset_normalizer import detect
 from collections import Counter
 import zstandard as zstd
 
 SEP={",",".",";","?","!","\n"}
-
-def detect_encoding(file_path):
-    with open(file_path,"rb") as f:
-        raw_data=f.read(1000)  # Read first 10KB for detection
-    result=chardet.detect(raw_data)
-    return result["encoding"]
 
 def compress(s,comp):
     # Get most common words from predefined dictionary
@@ -130,16 +124,12 @@ def decompress(b):
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
-    parser.add_argument("--f")
+    parser.add_argument("--f",help="File")
+    parser.add_argument("--e",help="Encoding")
     args=parser.parse_args()
 
-    # Detect encoding
-    encoding=detect_encoding(args.f)
-    if not encoding:
-        encoding="utf-8"
-
     # Read dickens
-    s=open("dickens",encoding="latin-1").read()[50_000:100_000] # Take first chunk of text
+    s=open(args.f,encoding=args.e).read()[50_000:100_000] # Take first chunk of text
 
     comp=zstd.ZstdCompressor(level=1)
 
