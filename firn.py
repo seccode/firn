@@ -1,8 +1,15 @@
+import argparse
+import chardet
 from collections import Counter
-import zlib
 import zstandard as zstd
 
 SEP={",",".",";","?","!","\n"}
+
+def detect_encoding(file_path):
+    with open(file_path,"rb") as f:
+        raw_data=f.read(1000)  # Read first 10KB for detection
+    result=chardet.detect(raw_data)
+    return result["encoding"]
 
 def compress(s,comp):
     # Get most common words from predefined dictionary
@@ -73,7 +80,6 @@ def compress(s,comp):
     ])
 
     # Return zstd compressed object
-    #return zlib.compress(v.encode("utf-8","replace"),level=-1)
     return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
@@ -123,25 +129,22 @@ def decompress(b):
     return " ".join(words)
 
 if __name__=="__main__":
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--f")
+    args=parser.parse_args()
+
+    # Detect encoding
+    encoding=detect_encoding(args.f)
+    if not encoding:
+        encoding="utf-8"
+
     # Read dickens
     s=open("dickens",encoding="latin-1").read()[50_000:100_000] # Take first chunk of text
 
-    f=open("s","w")
-    f.write(s)
-    f.close()
-
     comp=zstd.ZstdCompressor(level=1)
-    #_b=zlib.compress(s.encode("utf-8","replace"),level=-1)
-    _b=comp.compress(s.encode("utf-8","replace"))
 
     # Compress with our custom algorithm
     b=compress(s,comp)
-
-    # Print results
-    print("\n************************************************")
-    print("Compressed "+str(len(s))+" bytes to "+str(len(b))+" bytes")
-    print(str(round(100*(len(_b)-len(b))/len(_b),2))+"% improvement")
-    print("************************************************\n")
 
     # Decompress with our custom algorithm
     _s=decompress(b)
