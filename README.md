@@ -11,7 +11,7 @@ granular snow, especially on the upper part of a glacier, where it has not yet b
 
 # Usage
 ```
-python firn.py --f <file_name>
+python firn.py --f <file> --e <encoding>
 ```
 
 # How it works
