@@ -1,20 +1,23 @@
 import argparse
-from collections import Counter
+from charset_normalizer import detect
+from collections import Counter,defaultdict
+from math import log
+import zlib
 import zstandard as zstd
+from tqdm import tqdm
 
 SEP={",",".",";","?","!","\n"}
 
 def compress(s,comp):
-    # Get most common words from predefined dictionary
-    most_common_words=open("dict").read().split("\n")
-    most_common_words.remove("")
+    most_common_words=open("dict2").read().split("\n")
+    mcws=set(most_common_words)
 
     # Use most common chars in text as symbols
     mc=[m[0] for m in Counter(s).most_common()]
     g=set(mc)
     i=0
     C0,C1=None,None
-    while i<65_536:
+    while i<256:
         c=chr(i)
         if c not in g:
             if not C0:
@@ -27,9 +30,9 @@ def compress(s,comp):
     if not any([C0,C1]):
         return comp.compress(s.encode("utf-8","replace"))
 
-    # Take 35 most common chars
     symbols=mc[:35]
     symbols.remove(" ")
+    symbols.remove("\n")
     one_char_symbols=symbols[:]
 
     # Add two char symbols
@@ -47,15 +50,32 @@ def compress(s,comp):
                     continue
                 symbols.append(l0+l1+l2)
 
+    # Replace words with symbols
+    words=s.split(" ")
+    mc=Counter(words).most_common()
     # Map most common words to symbols
     d={word:symbol for word,symbol in zip(most_common_words,symbols)}
     g=set(d.values())
 
-    # Replace words with symbols
-    words=s.split(" ")
     new_words=[]
+    c=0
     for i,word in enumerate(words):
-        if word in d: # Replace with symbol
+        if "\n" in word and word[-1]!="\n":
+            ws=word.split("\n")
+            w=""
+            for wo in ws:
+                if wo in d:
+                    w+=d[wo]+"\n"
+                elif wo[:-1] in d and wo[-1] in SEP:
+                    w+=d[wo[:-1]]+wo[-1]+"\n"
+                elif wo in g:
+                    w+=C0+wo+"\n"
+                elif wo[:-1] in g and word[-1] in SEP:
+                    w+=wo+C0+"\n"
+                else:
+                    w+=wo+"\n"
+            new_words.append(w[:-1])
+        elif word in d: # Replace with symbol
             new_words.append(d[word])
         elif word[:-1] in d and word[-1] in SEP:
             new_words.append(d[word[:-1]]+word[-1])
@@ -73,23 +93,17 @@ def compress(s,comp):
         " ".join(new_words),
     ])
 
-    # Return zstd compressed object
     return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
-    # zstd decompress
     d=zstd.decompress(b).decode("utf-8","replace")
-    
     C0,C1=d[0],d[1]
     symbols,new_words=d[2:].split(C1)
     symbols=list(symbols)
     new_words=new_words.split(" ")
 
-    # Get most common words from predefined dictionary
-    most_common_words=open("dict").read().split("\n")
-    most_common_words.remove("")
+    most_common_words=open("dict2").read().split("\n")
 
-    # Use most common chars in text as symbols
     t=symbols[:]
     for l0 in t:
         for l1 in t:
@@ -97,7 +111,6 @@ def decompress(b):
                 continue
             symbols.append(l0+l1)
 
-    # Add three char symbols
     for l0 in t:
         for l1 in t:
             for l2 in t:
@@ -105,13 +118,26 @@ def decompress(b):
                     continue
                 symbols.append(l0+l1+l2)
 
-    # Map most symbols to most common words
     d={symbol:word for symbol,word in zip(symbols,most_common_words)}
 
-    # Replace symbols with original words
     words=[]
     for word in new_words:
-        if word in d: # Symbol used, replace with original word
+        if "\n" in word and word[-1]!="\n":
+            ws=word.split("\n")
+            w=""
+            for wo in ws:
+                if wo in d:
+                    w+=d[wo]+"\n"
+                elif wo[:-1] in d and wo[-1] in SEP:
+                    w+=d[wo[:-1]]+wo[-1]+"\n"
+                elif len(wo)>0 and wo[0]==C0:
+                    w+=wo[1:]+"\n"
+                elif len(wo)>1 and wo[-1]==C0:
+                    w+=wo[:-1]+"\n"
+                else:
+                    w+=wo+"\n"
+            words.append(w[:-1])
+        elif word in d: # Symbol used, replace with original word
             words.append(d[word])
         elif word[:-1] in d and word[-1] in SEP:
             words.append(d[word[:-1]]+word[-1])
@@ -129,12 +155,14 @@ if __name__=="__main__":
     parser.add_argument("--e",help="Encoding")
     args=parser.parse_args()
 
-    s=open(args.f,encoding=args.e).read()[:50_000] # Take first chunk of text
+    # Read dickens
+    s=open(args.f,encoding=args.e).read()[50_000:100_000]
 
     comp=zstd.ZstdCompressor(level=1)
 
-    # Compress with custom algorithm
+    # Compress with our custom algorithm
     b=compress(s,comp)
+    print(len(b))
 
     f=open("compressed","wb")
     f.write(b)
