@@ -154,7 +154,7 @@ if __name__=="__main__":
     args=parser.parse_args()
 
     # Read dickens
-    s=open(args.f,encoding=args.e).read()[50_000:100_000]
+    s=open(args.f,encoding=args.e).read()
 
     comp=zstd.ZstdCompressor(level=1)
 
