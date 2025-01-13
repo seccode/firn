@@ -1,15 +1,11 @@
 import argparse
-from charset_normalizer import detect
 from collections import Counter,defaultdict
-from math import log
-import zlib
 import zstandard as zstd
-from tqdm import tqdm
 
 SEP={",",".",";","?","!","\n"}
 
 def compress(s,comp):
-    most_common_words=open("dict2").read().split("\n")
+    most_common_words=open("dict").read().split("\n")
     mcws=set(most_common_words)
 
     # Use most common chars in text as symbols
@@ -30,9 +26,11 @@ def compress(s,comp):
     if not any([C0,C1]):
         return comp.compress(s.encode("utf-8","replace"))
 
-    symbols=mc[:35]
+    symbols=mc[:37]
     symbols.remove(" ")
     symbols.remove("\n")
+    symbols.remove("a")
+    symbols.remove("I")
     one_char_symbols=symbols[:]
 
     # Add two char symbols
@@ -102,7 +100,7 @@ def decompress(b):
     symbols=list(symbols)
     new_words=new_words.split(" ")
 
-    most_common_words=open("dict2").read().split("\n")
+    most_common_words=open("dict").read().split("\n")
 
     t=symbols[:]
     for l0 in t:
@@ -154,9 +152,14 @@ if __name__=="__main__":
     # Read dickens
     s=open(args.f,encoding=args.e).read()
 
-    comp=zstd.ZstdCompressor(level=1)
+    f=open("s","w")
+    f.write(s)
+    f.close()
+
+    comp=zstd.ZstdCompressor(level=22)
 
     # Compress with our custom algorithm
+    t=time.time()
     b=compress(s,comp)
     print(len(b))
 
