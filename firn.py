@@ -64,8 +64,6 @@ def compress(s,comp):
             ws=word.split("\n")
             w=""
             for wo in ws:
-                if "foe" in wo:
-                    print([ord(c) for c in wo])
                 if wo in d:
                     w+=d[wo]+"\n"
                 elif wo[:-1] in d and wo[-1] in SEP:
