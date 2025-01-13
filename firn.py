@@ -29,7 +29,6 @@ def compress(s,comp):
     symbols=mc[:37]
     symbols.remove(" ")
     symbols.remove("\n")
-    symbols.remove("a")
     symbols.remove("I")
     one_char_symbols=symbols[:]
 
@@ -159,7 +158,6 @@ if __name__=="__main__":
     comp=zstd.ZstdCompressor(level=22)
 
     # Compress with our custom algorithm
-    t=time.time()
     b=compress(s,comp)
     print(len(b))
 
