@@ -1,8 +1,11 @@
 import argparse
 from collections import Counter,defaultdict
+import zlib
 import zstandard as zstd
+from tqdm import tqdm
 
 SEP={",",".",";","?","!","\n"}
+M=250
 
 def compress(s,comp):
     most_common_words=open("dict").read().split("\n")
@@ -12,7 +15,7 @@ def compress(s,comp):
     mc=[m[0] for m in Counter(s).most_common()]
     g=set(mc)
     i=0
-    C0,C1=None,None
+    C0,C1,C2=None,None,None
     while i<256:
         c=chr(i)
         if c not in g:
@@ -20,18 +23,27 @@ def compress(s,comp):
                 C0=c
             elif not C1:
                 C1=c
+            elif not C2:
+                C2=c
             else:
                 break
         i+=1
-    if not any([C0,C1]):
+    if not any([C0,C1,C2]):
         return comp.compress(s.encode("utf-8","replace"))
 
-    symbols=mc[:37]
-    symbols.remove(" ")
-    symbols.remove("\n")
-    symbols.remove("I")
+    symbols=mc[:45]
+    if " " in symbols:
+        symbols.remove(" ")
+    if "\n" in symbols:
+        symbols.remove("\n")
+    if "a" in symbols:
+        symbols.remove("a")
+    if "I" in symbols:
+        symbols.remove("I")
     one_char_symbols=symbols[:]
 
+    x0=[]
+    x1=[]
     # Add two char symbols
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
@@ -49,7 +61,16 @@ def compress(s,comp):
 
     # Replace words with symbols
     words=s.split(" ")
-    mc=Counter(words).most_common()
+    c=Counter(words)
+    mc=c.most_common()
+
+    reordered_top=sorted(most_common_words[:M],key=lambda word:-c[word])
+    inds=[]
+    for w in reordered_top:
+        inds.append(chr(most_common_words[:M].index(w)+ord(C2)))
+
+    most_common_words = reordered_top + most_common_words[M:]
+
     # Map most common words to symbols
     d={word:symbol for word,symbol in zip(most_common_words,symbols)}
     g=set(d.values())
@@ -85,21 +106,24 @@ def compress(s,comp):
 
     # To decompress, we need one char symbols and new words
     v=C1.join([
-        C0,
+        C0+C2,
         "".join(one_char_symbols),
-        " ".join(new_words),
+        " ".join(new_words).replace("  ",C2),
+        "".join(inds)
     ])
 
     return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
     d=zstd.decompress(b).decode("utf-8","replace")
-    C0,C1=d[0],d[1]
-    symbols,new_words=d[2:].split(C1)
+    C0,C2,C1=d[0],d[1],d[2]
+    symbols,new_words,_map=d[3:].split(C1)
     symbols=list(symbols)
-    new_words=new_words.split(" ")
+    new_words=new_words.replace(C2,"  ").split(" ")
+    m=set(_map)
 
     most_common_words=open("dict").read().split("\n")
+    most_common_words=[most_common_words[ord(_m)-ord(C2)] for _m in _map]+most_common_words[M:]
 
     t=symbols[:]
     for l0 in t:
