@@ -1,8 +1,3 @@
-I would like to acknowledge the following people whose algorithms/work I build on top of:
-- David Huffman (Huffman coding)
-- Abraham Lempel and Jacob Ziv (LZ77)
-- Jarek Duda (ANS)
-- Yann Collet (FSE)
 
 ## Firn, definition:
 Granular snow, especially on the upper part of a glacier, where it has not yet been _compressed_ into ice.
