@@ -21,5 +21,5 @@ Using a sorted subset of chars reduces the amount of context-switching done by z
 | zstd (level 1, with dictionary trained on enwik9) | 21,565                | -               |
 
 # Limitations
-Works well for readable text-based files under 5MB
+Works well for readable text-based files
 
