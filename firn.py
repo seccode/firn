@@ -134,10 +134,24 @@ def compress(s,comp):
             new_words.append(word)
         i+=1
 
+    nn=[]
+    x=[]
+    i=0
+    for word in new_words:
+        if word.count("\n")==1:
+            wos=word.split("\n")
+            nn.append(wos[0])
+            nn.append(wos[1])
+            x.append(chr(i+ord(C1)+1))
+            i=0
+        else:
+            nn.append(word)
+            i+=1
     v=Q+C1.join([
         C0,
+        "".join(x),
+        " ".join(nn),
         "".join(one_char_symbols),
-        " ".join(new_words),
         "".join(inds),
     ])
 
@@ -146,9 +160,30 @@ def compress(s,comp):
 def decompress(b):
     d=zstd.decompress(b).decode("utf-8","replace")
     Q,C0,C1=d[0],d[1],d[2]
-    symbols,new_words,_map=d[3:].split(C1)
+    x,nn,symbols,_map=d[3:].split(C1)
     symbols=list(symbols)
-    new_words=new_words.split(" ")
+    nn=nn.split(" ")
+    new_words = []
+    i = 0           # index over nn
+    j = 0           # index over x
+    count_since_newline = 0
+
+    while i<len(nn):
+        if j<len(x):
+            target=ord(x[j])-ord(C1)-1
+        else:
+            target=None
+
+        if target is not None and count_since_newline==target and i+1<len(nn):
+            new_words.append(nn[i]+"\n"+nn[i+1])
+            i+=2
+            j+=1
+            count_since_newline=0
+        else:
+            new_words.append(nn[i])
+            i+=1
+            count_since_newline+=1
+
     m=set(_map)
 
     most_common_words=open("dict").read().split("\n")
