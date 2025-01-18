@@ -147,33 +147,31 @@ def compress(s,comp):
         else:
             nn.append(word)
             i+=1
-    v=Q+C1.join([
+    v=C1.join([
         C0,
-        "".join(x),
-        " ".join(nn),
-        "".join(one_char_symbols),
         "".join(inds),
-    ])
+        "".join(x),
+        " ".join(one_char_symbols),
+        " ".join(nn),
+    ])+Q
 
     return comp.compress(v.encode("utf-8","replace"))
 
 def decompress(b):
     d=zstd.decompress(b).decode("utf-8","replace")
-    Q,C0,C1=d[0],d[1],d[2]
-    x,nn,symbols,_map=d[3:].split(C1)
-    symbols=list(symbols)
+    Q,C0,C1=d[-1],d[0],d[1]
+    _map,x,symbols,nn=d[2:-1].split(C1)
+    symbols=symbols.split(" ")
     nn=nn.split(" ")
-    new_words = []
-    i = 0           # index over nn
-    j = 0           # index over x
-    count_since_newline = 0
-
+    new_words=[]
+    i=0
+    j=0
+    count_since_newline=0
     while i<len(nn):
         if j<len(x):
             target=ord(x[j])-ord(C1)-1
         else:
             target=None
-
         if target is not None and count_since_newline==target and i+1<len(nn):
             new_words.append(nn[i]+"\n"+nn[i+1])
             i+=2
