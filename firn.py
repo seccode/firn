@@ -8,7 +8,7 @@ import zstandard as zstd
 from tqdm import tqdm
 
 SEP={",",".",";","?","!","\n"}
-M=250
+M=252
 
 def compress(s,comp):
     most_common_words=open("dict").read().split("\n")
