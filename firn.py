@@ -99,9 +99,8 @@ def compress(s, comp):
     d = {word: symbol for word, symbol in zip(most_common_words, symbols)}
     g = set(d.values())
 
-    new_words = words[:2]
-    i = 2
-    for word in words[2:]:
+    new_words = []
+    for word in words:
         # Handle newline-splitting
         if "\n" in word:
             ws = word.split("\n")
@@ -162,7 +161,6 @@ def compress(s, comp):
             new_words.append(C0 + word)
         else:
             new_words.append(word)
-        i += 1
 
     # Next, build the arrays for compression
     nn = []
@@ -341,14 +339,6 @@ if __name__ == "__main__":
 
     # Decompress
     _s = decompress(b)
-    """
-    m0, m1 = s.split(" "), _s.split(" ")
-    for l, r in zip(m0, m1):
-        print(l, r)
-        if l != r:
-            break
-    """
-
     # Final assertion
     assert _s == s
 
