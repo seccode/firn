@@ -17,7 +17,7 @@ Using a sorted subset of chars increases the homogeneity of the transformed text
 # Results on 50KB of dickens text
 | Compressor | Compressed Size (Bytes) | Improvement (%) |
 |------------|--------------------------|-----------------|
-| Firn (with dictionary trained on enwik9) + zstd (level 1)       | 16,475                   | **23.60%**        |
+| Firn (with dictionary trained on enwik9) + zstd (level 1)       | 16,888                   | **21.69%**        |
 | zstd (level 1, with dictionary trained on enwik9) | 21,565                | -               |
 
 # Limitations
