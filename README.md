@@ -17,7 +17,7 @@ Using a sorted subset of chars reduces the amount of context-switching done by z
 # Results on 50KB of dickens text
 | Compressor | Compressed Size (Bytes) | Improvement (%) |
 |------------|--------------------------|-----------------|
-| Firn (with dictionary trained on enwik9) + zstd (level 1)       | 16,517                   | **23.41%**        |
+| Firn (with dictionary trained on enwik9) + zstd (level 1)       | 16,475                   | **23.60**        |
 | zstd (level 1, with dictionary trained on enwik9) | 21,565                | -               |
 
 # Limitations
