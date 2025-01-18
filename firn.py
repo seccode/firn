@@ -18,7 +18,7 @@ def compress(s,comp):
     mc=[m[0] for m in Counter(s).most_common()]
     h=set(mc)
     i=0
-    C0,C1,C2=None,None,None
+    C0,C1=None,None
     reserved={"0","1"}
     while i<256:
         c=chr(i)
@@ -27,12 +27,10 @@ def compress(s,comp):
                 C0=c
             elif not C1:
                 C1=c
-            elif not C2:
-                C2=c
             else:
                 break
         i+=1
-    if not any([C0,C1,C2]):
+    if not all([C0,C1]):
         return comp.compress(s.encode("utf-8","replace"))
 
     if len(s)>300_000:
@@ -82,7 +80,7 @@ def compress(s,comp):
 
         reordered_top=sorted(most_common_words[:M],key=lambda word:-c[word])
         for w in reordered_top:
-            inds.append(chr(most_common_words[:M].index(w)+ord(C2)))
+            inds.append(chr(most_common_words[:M].index(w)+ord(C1)+1))
 
         most_common_words = reordered_top + most_common_words[M:]
         Q="1"
@@ -90,9 +88,10 @@ def compress(s,comp):
     d={word:symbol for word,symbol in zip(most_common_words,symbols)}
     g=set(d.values())
 
-    new_words=[]
+    new_words=words[:2]
     x=[]
-    for i,word in enumerate(words):
+    i=2
+    for word in words[2:]:
         if "\n" in word:
             ws=word.split("\n")
             w=""
@@ -133,11 +132,12 @@ def compress(s,comp):
             new_words.append(C0+word)
         else: # Default case, word is not common
             new_words.append(word)
+        i+=1
 
     v=Q+C1.join([
-        C0+C2,
+        C0,
         "".join(one_char_symbols),
-        " ".join(new_words).replace("  ",C2),
+        " ".join(new_words),
         "".join(inds),
     ])
 
@@ -145,15 +145,15 @@ def compress(s,comp):
 
 def decompress(b):
     d=zstd.decompress(b).decode("utf-8","replace")
-    Q,C0,C2,C1=d[0],d[1],d[2],d[3]
-    symbols,new_words,_map=d[4:].split(C1)
+    Q,C0,C1=d[0],d[1],d[2]
+    symbols,new_words,_map=d[3:].split(C1)
     symbols=list(symbols)
-    new_words=new_words.replace(C2,"  ").split(" ")
+    new_words=new_words.split(" ")
     m=set(_map)
 
     most_common_words=open("dict").read().split("\n")
     if Q=="1":
-        most_common_words=[most_common_words[ord(_m)-ord(C2)] for _m in _map]+most_common_words[M:]
+        most_common_words=[most_common_words[ord(_m)-ord(C1)-1] for _m in _map]+most_common_words[M:]
 
     t=symbols[:]
     for l0 in t:
@@ -231,7 +231,7 @@ if __name__=="__main__":
     f.write(s)
     f.close()
 
-    comp=zstd.ZstdCompressor(level=1)
+    comp=zstd.ZstdCompressor(level=22)
 
     # Compress with our custom algorithm
     b=compress(s,comp)
