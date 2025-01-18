@@ -16,12 +16,13 @@ def compress(s,comp):
 
     # Use most common chars in text as symbols
     mc=[m[0] for m in Counter(s).most_common()]
-    g=set(mc)
+    h=set(mc)
     i=0
     C0,C1,C2=None,None,None
+    reserved={"0","1"}
     while i<256:
         c=chr(i)
-        if c not in g:
+        if c not in h and c not in reserved:
             if not C0:
                 C0=c
             elif not C1:
@@ -34,7 +35,10 @@ def compress(s,comp):
     if not any([C0,C1,C2]):
         return comp.compress(s.encode("utf-8","replace"))
 
-    symbols=mc[:45]
+    if len(s)>300_000:
+        symbols=mc[:20]
+    else:
+        symbols=mc[:45]
     if " " in symbols:
         symbols.remove(" ")
     if "\n" in symbols:
@@ -68,6 +72,14 @@ def compress(s,comp):
     Q="0"
     inds=[]
     if len(s)>300_000:
+        for l0 in one_char_symbols:
+            for l1 in one_char_symbols:
+                for l2 in one_char_symbols:
+                    for l3 in one_char_symbols:
+                        if l3 in SEP:
+                            continue
+                        symbols.append(l0+l1+l2+l3)
+
         reordered_top=sorted(most_common_words[:M],key=lambda word:-c[word])
         for w in reordered_top:
             inds.append(chr(most_common_words[:M].index(w)+ord(C2)))
@@ -96,12 +108,25 @@ def compress(s,comp):
                 else:
                     w+=wo+"\n"
             new_words.append(w[:-1])
+        elif "-" in word:
+            ws=word.split("-")
+            w=""
+            for wo in ws:
+                if wo in d:
+                    w+=d[wo]+"-"
+                elif wo[:-1] in d and wo[-1] in SEP:
+                    w+=d[wo[:-1]]+wo[-1]+"-"
+                elif wo in g:
+                    w+=C0+wo+"-"
+                elif wo[:-1] in g and wo[-1] in SEP:
+                    w+=C0+wo+"-"
+                else:
+                    w+=wo+"-"
+            new_words.append(w[:-1])
         elif word in d: # Replace with symbol
             new_words.append(d[word])
-            x.append("1")
         elif word[:-1] in d and word[-1] in SEP:
             new_words.append(d[word[:-1]]+word[-1])
-            x.append("0")
         elif word in g: # Word is a used symbol, add a marker
             new_words.append(C0+word)
         elif word[:-1] in g and word[-1] in SEP:
@@ -109,7 +134,6 @@ def compress(s,comp):
         else: # Default case, word is not common
             new_words.append(word)
 
-    # To decompress, we need one char symbols and new words
     v=Q+C1.join([
         C0+C2,
         "".join(one_char_symbols),
@@ -128,7 +152,7 @@ def decompress(b):
     m=set(_map)
 
     most_common_words=open("dict").read().split("\n")
-    if Q:
+    if Q=="1":
         most_common_words=[most_common_words[ord(_m)-ord(C2)] for _m in _map]+most_common_words[M:]
 
     t=symbols[:]
@@ -145,8 +169,16 @@ def decompress(b):
                     continue
                 symbols.append(l0+l1+l2)
 
+    if Q=="1":
+        for l0 in t:
+            for l1 in t:
+                for l2 in t:
+                    for l3 in t:
+                        if l3 in SEP:
+                            continue
+                        symbols.append(l0+l1+l2+l3)
+
     d={symbol:word for symbol,word in zip(symbols,most_common_words)}
-    h={symbols[i]:i for i in range(len(d))}
 
     words=[]
     for word in new_words:
@@ -162,6 +194,19 @@ def decompress(b):
                     w+=wo[1:]+"\n"
                 else:
                     w+=wo+"\n"
+            words.append(w[:-1])
+        elif "-" in word:
+            ws=word.split("-")
+            w=""
+            for wo in ws:
+                if wo in d:
+                    w+=d[wo]+"-"
+                elif wo[:-1] in d and wo[-1] in SEP:
+                    w+=d[wo[:-1]]+wo[-1]+"-"
+                elif len(wo)>0 and wo[0]==C0:
+                    w+=wo[1:]+"-"
+                else:
+                    w+=wo+"-"
             words.append(w[:-1])
         elif word in d: # Symbol used, replace with original word
             words.append(d[word])
