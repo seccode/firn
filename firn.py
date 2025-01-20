@@ -310,8 +310,6 @@ def decompress(b):
         else:
             words.append(word)
 
-    # Return them joined by spaces. This discards real line breaks if they
-    # existed outside tokens, but matches your original approach.
     return " ".join(words)
 
 
