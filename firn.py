@@ -19,8 +19,8 @@ def compress(s, comp):
     h = set(mc)
     i = 0
     C0, C1 = None, None
-    reserved = {"0", "1"}
 
+    reserved={"0","1"}
     while i < 256:
         c = chr(i)
         if c not in h and c not in reserved:
@@ -78,7 +78,6 @@ def compress(s, comp):
     Q = "0"
     inds = []
     if len(s) > 300_000:
-        # Add four-char symbols
         for l0 in one_char_symbols:
             for l1 in one_char_symbols:
                 for l2 in one_char_symbols:
@@ -178,6 +177,30 @@ def compress(s, comp):
             nn.append(word)
             i += 1
 
+    c=Counter(nn).most_common()
+    d={}
+    uc=[chr(i) for i in range(ord(C1)+1,5000) if chr(i) not in h]
+    i=0
+    if len(s)<300_000:
+        n=100
+    else:
+        n=250
+    for m in c[:n]:
+        if m[0] not in g:
+            if len(m[0])>1 and m[0][:-1] not in g:
+                if m[-1] not in SEP:
+                    d[m[0]]=uc[i]
+                    i+=1
+
+    new=[]
+    for word in nn:
+        if word in d:
+            new.append(d[word])
+        elif len(word)>0 and word[:-1] in d and word[-1] in SEP:
+            new.append(d[word[:-1]]+word[-1])
+        else:
+            new.append(word)
+
     # Construct the final string to compress
     # Format:  C0 C1-joined [ inds, x, one_char_symbols, nn ] + Q
     v = C1.join([
@@ -185,7 +208,9 @@ def compress(s, comp):
         "".join(inds),
         "".join(x),
         " ".join(one_char_symbols),
-        " ".join(nn),
+        " ".join(new),
+        " ".join(d.keys()),
+        "".join(d.values()),
     ]) + Q
 
     return comp.compress(v.encode("utf-8", "replace"))
@@ -200,9 +225,20 @@ def decompress(b):
     C1 = d_str[1]
 
     # Everything between d_str[2:-1]
-    _map, x, symbols, nn = d_str[2:-1].split(C1)
+    _map, x, symbols, new, dk, dv = d_str[2:-1].split(C1)
     symbols = symbols.split(" ")
-    nn = nn.split(" ")
+    new = new.split(" ")
+    dk=dk.split(" ")
+
+    d={v:k for k,v in zip(dk,dv)}
+    nn=[]
+    for word in new:
+        if word in d:
+            nn.append(d[word])
+        elif len(word)>1 and word[:-1] in d and word[-1] in SEP:
+            nn.append(d[word[:-1]]+word[-1])
+        else:
+            nn.append(word)
 
     # Rebuild "new_words" by combining tokens that had a single newline
     new_words = []
@@ -326,7 +362,7 @@ if __name__ == "__main__":
     with open("s", "w") as f:
         f.write(s)
 
-    comp = zstd.ZstdCompressor(level=22)
+    comp = zstd.ZstdCompressor(level=3)
 
     # Compress with our custom algorithm
     b = compress(s, comp)
