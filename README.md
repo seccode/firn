@@ -29,3 +29,5 @@ If you would like to sponsor further development of this compressor, please make
 
 Thank you!
 
+This is a demonstration of the algorithm. Work is being done to create a production ready package.
+
