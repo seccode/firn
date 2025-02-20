@@ -52,14 +52,11 @@ def compress(video_path, output_video):
             rearranged_c = np.zeros_like(c_frame)
 
             for i in range(3):  # R, G, B channels
-                # Corrected indexing: Get compensation value for each pixel
                 pixel_indices = last_remainder[:, :, i]  # Get last remainders
                 rearranged_c[:, :, i] = REARRANGED_TABLES[pixel_indices, pixel_indices, i]
 
-            # Apply compensation
             c_frame += rearranged_c
         else:
-            # First compensation frame uses the normal COMPENSATION_TABLE
             for i in range(3):  # R, G, B channels
                 c_frame[:, :, i] += LOOKUP_TABLE[remainder[:, :, i], i]
 
@@ -69,7 +66,6 @@ def compress(video_path, output_video):
         # Ensure values remain in valid range [0, 255]
         c_frame = np.clip(c_frame, 0, 255).astype(np.uint8)
 
-        # Write both frames: quantized and compensation frame
         out.write(frame_q)
         out.write(c_frame)
 
