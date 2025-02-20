@@ -27,8 +27,8 @@ def compress(video_path, output_video):
 
     for frame in tqdm(frames, desc="Processing Frames"):
         # Quantize by 2
-        frame_q = frame // 3  # Shape: (height, width, 3), values 0–127
-        remainder = frame % 3  # Shape: (height, width, 3), values 0 or 1
+        frame_q = frame // 2  # Shape: (height, width, 3), values 0–127
+        remainder = frame % 2  # Shape: (height, width, 3), values 0 or 1
 
         # Compute delta based on change from last remainder
         if last_remainder is None:
