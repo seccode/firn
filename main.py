@@ -1,3 +1,4 @@
+
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -25,6 +26,7 @@ def compress(video_path, output_video):
 
     last_remainder = None  # Track previous remainder
 
+    d=[]
     for frame in tqdm(frames, desc="Processing Frames"):
         # Quantize by 2
         frame_q = frame // 2  # Shape: (height, width, 3),
@@ -35,6 +37,7 @@ def compress(video_path, output_video):
             delta = remainder  # First frame: delta = remainder (assume last was 0)
         else:
             delta = (remainder!=last_remainder).astype(np.uint8)
+        d.append(delta)
 
         # Second frame: frame_q + delta
         frame_q_with_delta = frame_q + delta
@@ -45,7 +48,6 @@ def compress(video_path, output_video):
 
         # Write both frames
         out.write(frame_q)
-        out.write(frame_q_with_delta)
 
         # Update last remainder
         last_remainder = remainder.copy()
@@ -53,6 +55,8 @@ def compress(video_path, output_video):
         # Write original for reference
         out2.write(frame)
 
+    for _d in d:
+        out.write(_d)
     out.release()
     out2.release()
 
