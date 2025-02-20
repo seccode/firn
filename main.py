@@ -11,7 +11,7 @@ LOOKUP_TABLE = np.array([
 ], dtype=np.uint8)
 
 # **Precompute rearranged lookup tables for each possible remainder value**
-REARRANGED_TABLES = np.array([np.roll(COMPENSATION_TABLE, shift=-i, axis=0) for i in range(16)], dtype=np.uint8)
+REARRANGED_TABLES = np.array([np.roll(LOOKUP_TABLE, shift=-i, axis=0) for i in range(16)], dtype=np.uint8)
 
 def extract_frames(video_path):
     """Extracts frames from a video file"""
