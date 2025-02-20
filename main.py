@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-# Original lookup table for remainder-based compensation
-COMPENSATION_TABLE = np.array([
+# Original lookup table for remainder-based lookup
+LOOKUP_TABLE = np.array([
     (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1),
     (1, 1, 0), (0, 1, 1), (1, 0, 1), (1, 1, 1),
     (0, 2, 0), (0, 0, 2), (2, 0, 0), (0, 1, 2),
@@ -44,35 +44,34 @@ def compress(video_path, output_video):
 
         # Compute remainder
         remainder = frame % 16  # Shape: (height, width, 3)
-
-        # Create compensation frame
-        compensation_frame = frame_q.copy()
+        
+        c_frame = frame_q.copy()
 
         if last_remainder is not None:
             # Select rearranged table for each pixel using its last remainder
-            rearranged_compensation = np.zeros_like(compensation_frame)
+            rearranged_c = np.zeros_like(c_frame)
 
             for i in range(3):  # R, G, B channels
                 # Corrected indexing: Get compensation value for each pixel
                 pixel_indices = last_remainder[:, :, i]  # Get last remainders
-                rearranged_compensation[:, :, i] = REARRANGED_TABLES[pixel_indices, pixel_indices, i]
+                rearranged_c[:, :, i] = REARRANGED_TABLES[pixel_indices, pixel_indices, i]
 
             # Apply compensation
-            compensation_frame += rearranged_compensation
+            c_frame += rearranged_c
         else:
             # First compensation frame uses the normal COMPENSATION_TABLE
             for i in range(3):  # R, G, B channels
-                compensation_frame[:, :, i] += COMPENSATION_TABLE[remainder[:, :, i], i]
+                c_frame[:, :, i] += LOOKUP_TABLE[remainder[:, :, i], i]
 
         # Store current remainder for the next frame
         last_remainder = remainder.copy()
 
         # Ensure values remain in valid range [0, 255]
-        compensation_frame = np.clip(compensation_frame, 0, 255).astype(np.uint8)
+        c_frame = np.clip(c_frame, 0, 255).astype(np.uint8)
 
         # Write both frames: quantized and compensation frame
         out.write(frame_q)
-        out.write(compensation_frame)
+        out.write(c_frame)
 
         out2.write(frame)  # Original frame output for reference
 
