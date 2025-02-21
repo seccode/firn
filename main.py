@@ -21,7 +21,7 @@ def compress(video_path, output_video):
     cap=cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
-    fourcc=0
+    fourcc=cv2.VideoWriter_fourcc(*"FFV1")
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
     last_remainder = None  # Track previous remainder
     _frame=np.zeros(frames[0].shape).astype(np.uint8)
@@ -29,7 +29,7 @@ def compress(video_path, output_video):
     for frame in tqdm(frames, desc="Processing Frames"):
         _frame[:,:,0]=frame[:,:,0]
         if last is not None:
-            out.write(cv2.subtract(_frame,last))
+            out.write(cv2.subtract(_frame.astype(np.int16), last.astype(np.int16)).astype(np.uint8))
         else:
             out.write(_frame)
         last=_frame
@@ -38,7 +38,7 @@ def compress(video_path, output_video):
     for frame in tqdm(frames, desc="Processing Frames"):
         _frame[:,:,0]=frame[:,:,1]
         if last is not None:
-            out.write(cv2.subtract(_frame,last))
+            out.write(cv2.subtract(_frame.astype(np.int16), last.astype(np.int16)).astype(np.uint8))
         else:
             out.write(_frame)
         last=_frame
@@ -47,7 +47,7 @@ def compress(video_path, output_video):
     for frame in tqdm(frames, desc="Processing Frames"):
         _frame[:,:,0]=frame[:,:,2]
         if last is not None:
-            out.write(cv2.subtract(_frame,last))
+            out.write(cv2.subtract(_frame.astype(np.int16), last.astype(np.int16)).astype(np.uint8))
         else:
             out.write(_frame)
         last=_frame
@@ -68,21 +68,21 @@ def decompress(compressed_video, output_video):
     last=None
     for i,_f in enumerate(r):
         if last is not None:
-            f[i][:,:,0]=cv2.add(last,_f[:,:,0])
+            f[i][:,:,0]=cv2.add(last.astype(np.int16), _f[:,:,0].astype(np.int16)).astype(np.uint8)
         else:
             f[i][:,:,0]=_f[:,:,0]
         last=f[i][:,:,0]
     last=None
     for i,_f in enumerate(g):
         if last is not None:
-            f[i][:,:,1]=cv2.add(last,_f[:,:,0])
+            f[i][:,:,1]=cv2.add(last.astype(np.int16), _f[:,:,0].astype(np.int16)).astype(np.uint8)
         else:
             f[i][:,:,1]=_f[:,:,0]
         last=f[i][:,:,1]
     last=None
     for i,_f in enumerate(b):
         if last is not None:
-            f[i][:,:,2]=cv2.add(last,_f[:,:,0])
+            f[i][:,:,2]=cv2.add(last.astype(np.int16), _f[:,:,0].astype(np.int16)).astype(np.uint8)
         else:
             f[i][:,:,2]=_f[:,:,0]
         last=f[i][:,:,2]
@@ -92,21 +92,7 @@ def decompress(compressed_video, output_video):
 
 video_path = "input4.mp4"
 output_video = "output.avi"
-restored="restored.avi"
-
-
-# Run compression
+restored = "restored.avi"
 compress(video_path, output_video)
-cmd=[
-    "ffmpeg",
-    "-i", output_video,
-    "-c:v","libx265",
-    "-preset","slow",
-    "-cpu-used","8",
-    "-x265-params","lossless=1",
-    "-pix_fmt","yuv444p",
-    "out.mp4"
-]
-subprocess.run(cmd)
-decompress("out.mp4",restored)
+decompress(output_video,restored)
 
