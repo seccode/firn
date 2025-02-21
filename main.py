@@ -16,9 +16,11 @@ def extract_frames(video_path):
     return frames
 
 def compress(video_path, output_video):
-    frames = extract_frames(video_path)[:300]
+    frames = extract_frames(video_path)[:40]
     height, width, _ = frames[0].shape
-    fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS)
+    cap=cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
 
     fourcc = cv2.VideoWriter_fourcc(*"av01")  # H.264, swap to "FFV1" for lossless
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
@@ -73,7 +75,7 @@ def decompress(compressed_video, output_video):
 
     # Get video properties
     height, width, _ = quantized_frames[0].shape
-    fps = cv2.VideoCapture(compressed_video).get(cv2.CAP_PROP_FPS) / 2  # Undo the FPS doubling
+    fps = cv2.VideoCapture(compressed_video).get(cv2.CAP_PROP_FPS)  # Undo the FPS doubling
 
     # Setup output video writer
     fourcc = 0
@@ -119,7 +121,7 @@ def decompress(compressed_video, output_video):
     out.release()
 
 # Paths
-video_path = "input3.mp4"
+video_path = "input2.mp4"
 output_video = "output.mp4"
 restored="restored.avi"
 
