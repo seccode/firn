@@ -15,13 +15,12 @@ def extract_frames(video_path):
     cap.release()
     return frames
 
-# Can be recursively applied to quantized frames for greater effect
 def compress(video_path, output_video):
-    frames = extract_frames(video_path)
+    frames = extract_frames(video_path)[:300]
     height, width, _ = frames[0].shape
-    fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS) * 2  # Double FPS
+    fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS)
 
-    fourcc = cv2.VideoWriter_fourcc(*"avc1")  # H.264, swap to "FFV1" for lossless
+    fourcc = cv2.VideoWriter_fourcc(*"av01")  # H.264, swap to "FFV1" for lossless
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
     out2 = cv2.VideoWriter("output2.mp4", fourcc, fps, (width, height))  # Original reference
 
