@@ -58,8 +58,8 @@ def decompress(compressed_video, output_video):
     total_frames = len(frames)
     s=int(total_frames/3)
     r=frames[:s]
-    g=frames[s:-s]
-    b=frames[-s:]
+    g=frames[s:2*s]
+    b=frames[2*s:]
     height, width, _ = frames[0].shape
     fps = cv2.VideoCapture(compressed_video).get(cv2.CAP_PROP_FPS)  # Undo the FPS doubling
     fourcc = 0
@@ -104,6 +104,7 @@ cmd=[
     "-preset","slow",
     "-cpu-used","8",
     "-x265-params","lossless=1",
+    "-pix_fmt","yuv444p",
     "out.mp4"
 ]
 subprocess.run(cmd)
