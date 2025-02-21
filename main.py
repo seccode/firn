@@ -15,6 +15,8 @@ def extract_frames(video_path):
     cap.release()
     return frames
 
+# This can losslessly compress video a lot (if paired with a lossless compressor)
+# and it can still be used to great effect with a lossy compressor
 def compress(video_path, output_video):
     frames = extract_frames(video_path)
     height, width, _ = frames[0].shape
