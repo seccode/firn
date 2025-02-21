@@ -15,14 +15,13 @@ def extract_frames(video_path):
     cap.release()
     return frames
 
-# This can losslessly compress video a lot (if paired with a lossless compressor)
-# and it can still be used to great effect with a lossy compressor
+# This can losslessly compress video a lot and it can still be used to great effect with a lossy compressor
 def compress(video_path, output_video):
     frames = extract_frames(video_path)
     height, width, _ = frames[0].shape
     fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS) * 2  # Double FPS
 
-    fourcc = cv2.VideoWriter_fourcc(*"avc1")  # H.264, swap to "FFV1" for lossless
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
     out2 = cv2.VideoWriter("output2.mp4", fourcc, fps, (width, height))  # Original reference
 
