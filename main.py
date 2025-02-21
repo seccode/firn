@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
-import subprocess
 from tqdm import tqdm
 
 def extract_frames(video_path):
-    """Extracts frames from a video file"""
+    """Extracts frames from a video file with no color conversion"""
     cap = cv2.VideoCapture(video_path)
+    cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
     frames = []
     while cap.isOpened():
         ret, frame = cap.read()
@@ -13,81 +13,74 @@ def extract_frames(video_path):
             break
         frames.append(frame)
     cap.release()
+    if not frames:
+        raise ValueError(f"No frames extracted from {video_path}")
     return frames
 
-def compress(video_path, output_video):
+def compress(video_path, output_bin):
+    """Stores raw frame differences in a binary file"""
     frames = extract_frames(video_path)
-    height, width, _ = frames[0].shape
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    cap.release()
-
-    fourcc = cv2.VideoWriter_fourcc(*"FFV1")  # Ensure lossless codec
-    out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
-
-    last = None
-    for channel in range(3):  # Process R, G, B separately
-        _frame = np.zeros(frames[0].shape, dtype=np.uint8)
-        for frame in tqdm(frames, desc=f"Processing Channel {channel}"):
-            _frame[:, :, 0] = frame[:, :, channel]
-            if last is not None:
-                diff = cv2.subtract(_frame.astype(np.int16), last.astype(np.int16)).clip(0, 255).astype(np.uint8)
-                out.write(diff)
-            else:
-                out.write(_frame)
-            last = _frame.copy()
-    out.release()
-
-
-def decompress(compressed_video, output_video):
-    frames = extract_frames(compressed_video)
-    total_frames = len(frames)
-    s = total_frames // 3  # Ensure exact division
-
-    r = frames[:s]
-    g = frames[s:2*s]
-    b = frames[2*s:]
+    if not frames:
+        raise ValueError("No frames extracted from video")
 
     height, width, _ = frames[0].shape
-    fps = cv2.VideoCapture(compressed_video).get(cv2.CAP_PROP_FPS)
+    num_frames = len(frames)
 
-    fourcc = cv2.VideoWriter_fourcc(*"FFV1")  # Ensure same codec as compression
+    with open(output_bin, "wb") as f:
+        # Store width, height, and frame count
+        f.write(np.array([width, height, num_frames], dtype=np.int32).tobytes())
+
+        for channel in range(3):
+            last = None
+            for i, frame in enumerate(tqdm(frames, desc=f"Compressing Channel {channel}")):
+                current_channel = frame[:, :, channel].astype(np.uint8)
+
+                if last is None:
+                    f.write(current_channel.tobytes())
+                else:
+                    diff_channel = ((current_channel.astype(np.int16) - last.astype(np.int16)) % 256).astype(np.uint8)
+                    f.write(diff_channel.tobytes())
+
+                last = current_channel.copy()
+
+def decompress(compressed_bin, output_video, fps=30):
+    """Reconstructs video from binary frame differences"""
+    with open(compressed_bin, "rb") as f:
+        # Read metadata
+        width, height, num_frames = np.frombuffer(f.read(12), dtype=np.int32)
+
+        reconstructed_frames = [np.zeros((height, width, 3), dtype=np.uint8) for _ in range(num_frames)]
+
+        for channel in range(3):
+            last = None
+            for i in range(num_frames):
+                raw_bytes = f.read(height * width)
+                if len(raw_bytes) != height * width:
+                    raise ValueError(f"Error: Unexpected data size for frame {i} (Channel {channel})")
+
+                diff_channel = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((height, width))
+
+                if last is None:
+                    reconstructed_frames[i][:, :, channel] = diff_channel
+                else:
+                    recon_channel = ((last.astype(np.int16) + diff_channel.astype(np.int16)) % 256).astype(np.uint8)
+                    reconstructed_frames[i][:, :, channel] = recon_channel
+
+                last = reconstructed_frames[i][:, :, channel].copy()
+
+    # Save reconstructed frames to video using FFmpeg
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
 
-    f = [np.zeros(frames[0].shape, dtype=np.uint8) for _ in range(s)]
-
-    last = None
-    for i, _f in enumerate(r):
-        if last is not None:
-            f[i][:,:,0] = cv2.add(last.astype(np.int16), _f[:,:,0].astype(np.int16)).clip(0, 255).astype(np.uint8)
-        else:
-            f[i][:,:,0] = _f[:,:,0]
-        last = f[i][:,:,0]
-
-    last = None
-    for i, _f in enumerate(g):
-        if last is not None:
-            f[i][:,:,1] = cv2.add(last.astype(np.int16), _f[:,:,0].astype(np.int16)).clip(0, 255).astype(np.uint8)
-        else:
-            f[i][:,:,1] = _f[:,:,0]
-        last = f[i][:,:,1]
-
-    last = None
-    for i, _f in enumerate(b):
-        if last is not None:
-            f[i][:,:,2] = cv2.add(last.astype(np.int16), _f[:,:,0].astype(np.int16)).clip(0, 255).astype(np.uint8)
-        else:
-            f[i][:,:,2] = _f[:,:,0]
-        last = f[i][:,:,2]
-
-    for _f in f:
-        out.write(_f)
+    for frame in reconstructed_frames:
+        out.write(frame)
     out.release()
 
-
+# Run compression and decompression
 video_path = "input4.mp4"
-output_video = "output.avi"
-restored = "restored.avi"
-compress(video_path, output_video)
-decompress(output_video,restored)
+compressed_bin = "compressed.bin"
+output_video = "restored.avi"
+
+compress(video_path, compressed_bin)
+decompress(compressed_bin, output_video)
 
