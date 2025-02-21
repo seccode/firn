@@ -55,6 +55,9 @@ def compress(video_path, output_video):
 
 def decompress(compressed_video, output_video):
     frames = extract_frames(compressed_video)
+    for frame in frames:
+        print(frame)
+    a
     total_frames = len(frames)
     s=int(total_frames/3)
     r=frames[:s]
@@ -100,34 +103,12 @@ compress(video_path, output_video)
 cmd=[
     "ffmpeg",
     "-i", output_video,
-    "-c:v", "libaom-av1",
-    "-crf", "18",
     "-b:v","5M",
-    "-preset","ultrafast",
-    "-cpu-used","4",
-    "-g","240",
-    "-keyint_min","240",
-    "-tile-columns","2",
-    "-tile-rows","2",
-    "-row-mt","1",
+    "-preset","slow",
+    "-cpu-used","8",
+    "-qp","0",
     "out.mp4"
 ]
 subprocess.run(cmd)
-cmd=[
-    "ffmpeg",
-    "-i", video_path,
-    "-c:v", "libaom-av1",
-    "-crf", "18",
-    "-b:v","5M",
-    "-preset","ultrafast",
-    "-cpu-used","4",
-    "-g","240",
-    "-keyint_min","240",
-    "-tile-columns","2",
-    "-tile-rows","2",
-    "-row-mt","1",
-    "output2.mp4"
-]
-subprocess.run(cmd)
-decompress("out.mp4",restored)
+#decompress("out.mp4",restored)
 
