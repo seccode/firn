@@ -15,6 +15,7 @@ def extract_frames(video_path):
     cap.release()
     return frames
 
+# Can be recursively applied to quantized frames for greater effect
 def compress(video_path, output_video):
     frames = extract_frames(video_path)
     height, width, _ = frames[0].shape
