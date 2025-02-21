@@ -55,9 +55,6 @@ def compress(video_path, output_video):
 
 def decompress(compressed_video, output_video):
     frames = extract_frames(compressed_video)
-    for frame in frames:
-        print(frame)
-    a
     total_frames = len(frames)
     s=int(total_frames/3)
     r=frames[:s]
@@ -81,7 +78,7 @@ def decompress(compressed_video, output_video):
             f[i][:,:,1]=cv2.add(last,_f[:,:,0])
         else:
             f[i][:,:,1]=_f[:,:,0]
-        last=f[i][:,:,0]
+        last=f[i][:,:,1]
     last=None
     for i,_f in enumerate(b):
         if last is not None:
@@ -106,10 +103,9 @@ cmd=[
     "-c:v","libx265",
     "-preset","slow",
     "-cpu-used","8",
-    "-qp","0",
-    "-pix_fmt","yuv420p",
+    "-x265-params","lossless=1",
     "out.mp4"
 ]
 subprocess.run(cmd)
-#decompress("out.mp4",restored)
+decompress("out.mp4",restored)
 
