@@ -46,6 +46,8 @@ def compress(video_path, output_video):
         frame_q = np.clip(frame_q, 0, 255).astype(np.uint8)
         frame_q_with_delta = np.clip(frame_q_with_delta, 0, 255).astype(np.uint8)
 
+        #Apply this recursively to enhance transformation - might not work with all compressors
+
         # Write both frames
         out.write(frame_q)
 
