@@ -1,6 +1,6 @@
-
 import cv2
 import numpy as np
+import subprocess
 from tqdm import tqdm
 
 def extract_frames(video_path):
@@ -16,15 +16,16 @@ def extract_frames(video_path):
     return frames
 
 def compress(video_path, output_video):
-    frames = extract_frames(video_path)[:40]
+    frames = extract_frames(video_path)
     height, width, _ = frames[0].shape
     cap=cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
 
-    fourcc = cv2.VideoWriter_fourcc(*"av01")  # H.264, swap to "FFV1" for lossless
+    #fourcc = cv2.VideoWriter_fourcc(*"av01")  # H.264, swap to "FFV1" for lossless
+    fourcc=0
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
-    out2 = cv2.VideoWriter("output2.mp4", fourcc, fps, (width, height))  # Original reference
+    #out2 = cv2.VideoWriter("output2.mp4", fourcc, fps, (width, height))  # Original reference
 
     last_remainder = None  # Track previous remainder
 
@@ -55,12 +56,12 @@ def compress(video_path, output_video):
         last_remainder = remainder.copy()
 
         # Write original for reference
-        out2.write(frame)
+        #out2.write(frame)
 
     for _d in d:
-        out.write(_d)
+        out.write(_d*255)
     out.release()
-    out2.release()
+    #out2.release()
 
 def decompress(compressed_video, output_video):
     """Decompresses the video compressed with the custom algorithm"""
@@ -68,7 +69,6 @@ def decompress(compressed_video, output_video):
     frames = extract_frames(compressed_video)
     total_frames = len(frames)
 
-    # Calculate split point (original frames followed by delta frames)
     original_frame_count = total_frames // 2
     quantized_frames = frames[:original_frame_count]
     delta_frames = frames[original_frame_count:]
@@ -87,7 +87,7 @@ def decompress(compressed_video, output_video):
     for i in tqdm(range(len(quantized_frames)), desc="Decompressing Frames"):
         # Get current quantized frame and corresponding delta
         frame_q = quantized_frames[i]
-        delta = delta_frames[i]
+        delta = delta_frames[i]/255
 
         # Handle edge cases from lossy compression
         # Quantized frames should be in range [0, 127]
@@ -122,9 +122,42 @@ def decompress(compressed_video, output_video):
 
 # Paths
 video_path = "input2.mp4"
-output_video = "output.mp4"
+output_video = "output.avi"
 restored="restored.avi"
+
 
 # Run compression
 compress(video_path, output_video)
-decompress(output_video,restored)
+cmd=[
+    "ffmpeg",
+    "-i", output_video,
+    "-c:v", "libaom-av1",
+    "-crf", "18",
+    "-b:v","5M",
+    "-preset","ultrafast",
+    "-cpu-used","4",
+    "-g","240",
+    "-keyint_min","240",
+    "-tile-columns","2",
+    "-tile-rows","2",
+    "-row-mt","1",
+    "out.mp4"
+]
+subprocess.run(cmd)
+cmd=[
+    "ffmpeg",
+    "-i", video_path,
+    "-c:v", "libaom-av1",
+    "-crf", "18",
+    "-b:v","5M",
+    "-preset","ultrafast",
+    "-cpu-used","4",
+    "-g","240",
+    "-keyint_min","240",
+    "-tile-columns","2",
+    "-tile-rows","2",
+    "-row-mt","1",
+    "output2.mp4"
+]
+subprocess.run(cmd)
+decompress("out.mp4",restored)
