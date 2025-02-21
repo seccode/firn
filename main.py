@@ -81,7 +81,7 @@ def decompress(compressed_video, output_video):
             f[i][:,:,1]=cv2.add(last,_f[:,:,0])
         else:
             f[i][:,:,1]=_f[:,:,0]
-        last=f[i][:,:,1]
+        last=f[i][:,:,0]
     last=None
     for i,_f in enumerate(b):
         if last is not None:
@@ -103,10 +103,11 @@ compress(video_path, output_video)
 cmd=[
     "ffmpeg",
     "-i", output_video,
-    "-b:v","5M",
+    "-c:v","libx265",
     "-preset","slow",
     "-cpu-used","8",
     "-qp","0",
+    "-pix_fmt","yuv420p",
     "out.mp4"
 ]
 subprocess.run(cmd)
