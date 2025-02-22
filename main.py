@@ -23,7 +23,6 @@ def compress(video_path, output_video):
 
     fourcc = 0
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
-    out2 = cv2.VideoWriter("output2.mp4", fourcc, fps, (width, height))  # Original reference
 
     last_remainder = None  # Track previous remainder
 
@@ -53,13 +52,9 @@ def compress(video_path, output_video):
         # Update last remainder
         last_remainder = remainder.copy()
 
-        # Write original for reference
-        out2.write(frame)
-
     for _d in d:
         out.write(_d)
     out.release()
-    out2.release()
 
 def decompress(compressed_video, output_video):
     """Decompresses the video compressed with the custom algorithm"""
@@ -120,19 +115,20 @@ def decompress(compressed_video, output_video):
     out.release()
 
 # Paths
-video_path = "input3.mp4"
-output_video = "output.raw"
+video_path = "input.avi"
+output_video = "output.avi"
 
 # Run compression
 compress(video_path, output_video)
 cmd=[
     "ffmpeg","-i",
-    "input.mp4",
+    "output.avi",
     "-c:v","libx265",
     "-preset","slow",
     "-x265-params","lossless=1",
     "-c:a","copy",
     "output_lossless.mp4"
 ]
+subprocess.run(cmd)
 
 #decompress(output_video,restored)
