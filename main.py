@@ -29,7 +29,7 @@ def compress(video_path, output_video):
     for frame in tqdm(frames, desc="Processing Frames"):
         _frame[:,:,0]=frame[:,:,0]
         if last is not None:
-            out.write(cv2.subtract(_frame,last)%255)
+            out.write(cv2.subtract(_frame,last)%256)
         else:
             out.write(_frame)
         last=_frame
@@ -38,7 +38,7 @@ def compress(video_path, output_video):
     for frame in tqdm(frames, desc="Processing Frames"):
         _frame[:,:,0]=frame[:,:,1]
         if last is not None:
-            out.write(cv2.subtract(_frame,last)%255)
+            out.write(cv2.subtract(_frame,last)%256)
         else:
             out.write(_frame)
         last=_frame
@@ -47,7 +47,7 @@ def compress(video_path, output_video):
     for frame in tqdm(frames, desc="Processing Frames"):
         _frame[:,:,0]=frame[:,:,2]
         if last is not None:
-            out.write(cv2.subtract(_frame,last)%255)
+            out.write(cv2.subtract(_frame,last)%256)
         else:
             out.write(_frame)
         last=_frame
