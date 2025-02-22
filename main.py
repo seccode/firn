@@ -1,6 +1,6 @@
-
 import cv2
 import numpy as np
+import subprocess
 from tqdm import tqdm
 
 def extract_frames(video_path):
@@ -30,6 +30,7 @@ def compress(video_path, output_video):
     d=[]
     x=[]
     i=0
+    j=0
     for frame in tqdm(frames, desc="Processing Frames"):
         # Quantize by 2
         frame_q = frame // 2  # Shape: (height, width, 3),
@@ -62,9 +63,11 @@ def compress(video_path, output_video):
 
         # Write original for reference
 
+        j+=1
     for _d in d:
         out.write(_d)
     out.release()
+    return j
 
 def decompress(compressed_video, output_video):
     """Decompresses the video compressed with the custom algorithm"""
@@ -131,7 +134,6 @@ output_video = "output.avi"
 # Run compression
 compress(video_path, output_video)
 
-import subprocess
 
 cmd = [
     "ffmpeg", "-i", output_video,
@@ -144,5 +146,4 @@ cmd = [
 
 # Run FFmpeg command
 subprocess.run(cmd)
-
 
