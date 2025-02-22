@@ -81,7 +81,7 @@ def decompress(compressed_video, output_video):
             f[i][:,:,1]=cv2.add(last,_f[:,:,0])
         else:
             f[i][:,:,1]=_f[:,:,0]
-        last=f[i][:,:,0]
+        last=f[i][:,:,1]
     last=None
     for i,_f in enumerate(b):
         if last is not None:
