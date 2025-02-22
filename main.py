@@ -28,6 +28,8 @@ def compress(video_path, output_video):
     last_remainder = None  # Track previous remainder
 
     d=[]
+    x=[]
+    i=0
     for frame in tqdm(frames, desc="Processing Frames"):
         # Quantize by 2
         frame_q = frame // 2  # Shape: (height, width, 3),
@@ -38,7 +40,12 @@ def compress(video_path, output_video):
             delta = remainder  # First frame: delta = remainder (assume last was 0)
         else:
             delta = (remainder!=last_remainder).astype(np.uint8)
-        d.append(delta)
+        if np.array_equal(remainder, last_remainder):
+            i+=1
+        else:
+            x.append(i)
+            i=0
+            d.append(delta)
 
         # Second frame: frame_q + delta
         frame_q_with_delta = frame_q + delta
