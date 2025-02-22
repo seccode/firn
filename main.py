@@ -11,8 +11,7 @@ def extract_frames(video_path):
         ret, frame = cap.read()
         if not ret:
             break
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGRA2RGB)
-        frames.append(frame_rgb)
+        frames.append(frame)
     cap.release()
     return frames
 
@@ -20,7 +19,7 @@ def extract_frames(video_path):
 def compress(video_path, output_video):
     frames = extract_frames(video_path)
     height, width, _ = frames[0].shape
-    fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS) * 2  # Double FPS
+    fps = cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS)
 
     fourcc = 0
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
@@ -134,14 +133,8 @@ output_video = "output.avi"
 # Run compression
 compress(video_path, output_video)
 
-
 cmd = [
-    "ffmpeg", "-i", output_video,
-    "-c:v", "ffv1",
-    "-level", "3",
-    "-pix_fmt", "bgr0",
-    "-c:a", "copy",
-    "output_lossless.avi"
+    "ffmpeg","-i",output_video,"-pix_fmt","bgr0","-c:v","ffv1","-level","3","-c:a","copy","output_lossless.avi"
 ]
 
 # Run FFmpeg command
