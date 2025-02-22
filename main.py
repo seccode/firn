@@ -4,20 +4,22 @@ import subprocess
 from tqdm import tqdm
 from collections import Counter
 
-def extract_frames(video_path):
-    """Extracts frames from a video file"""
+def extract_frames(video_path, as_grayscale=False):
+    """Extracts frames from a video file, optionally as grayscale"""
     cap = cv2.VideoCapture(video_path)
     frames = []
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
+        if as_grayscale and frame.ndim == 3:  # If frame is RGB, convert to grayscale
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frames.append(frame)
     cap.release()
     return frames
 
 def compress(video_path, output_video):
-    frames = extract_frames(video_path)
+    frames = extract_frames(video_path)  # Read as RGB
     height, width, _ = frames[0].shape
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -25,28 +27,28 @@ def compress(video_path, output_video):
     fourcc = 0
 
     # First pass: Compute differences and build frequency counter
-    temp_video = "temp_diff.avi"
+    temp_video = "output.avi"
     out = cv2.VideoWriter(temp_video, fourcc, fps, (width, height), isColor=False)  # Grayscale output
     value_counts = Counter()
 
     # Red channel differences
-    _frame = np.zeros((height, width), dtype=np.uint8)  # Grayscale frame
+    _frame = np.zeros((height, width), dtype=np.uint8)
     last = None
     for frame in tqdm(frames, desc="Pass 1: Red Frames"):
-        _frame[:] = frame[:,:,0]  # Red values
+        _frame[:] = frame[:,:,0]
         if last is not None:
             diff = cv2.subtract(_frame, last) % 255
         else:
             diff = _frame.copy()
         value_counts.update(diff.ravel())
-        out.write(diff)  # Write grayscale frame
+        out.write(diff)
         last = _frame.copy()
 
     # Green channel differences
     _frame = np.zeros((height, width), dtype=np.uint8)
     last = None
     for frame in tqdm(frames, desc="Pass 1: Green Frames"):
-        _frame[:] = frame[:,:,1]  # Green values
+        _frame[:] = frame[:,:,1]
         if last is not None:
             diff = cv2.subtract(_frame, last) % 255
         else:
@@ -59,7 +61,7 @@ def compress(video_path, output_video):
     _frame = np.zeros((height, width), dtype=np.uint8)
     last = None
     for frame in tqdm(frames, desc="Pass 1: Blue Frames"):
-        _frame[:] = frame[:,:,2]  # Blue values
+        _frame[:] = frame[:,:,2]
         if last is not None:
             diff = cv2.subtract(_frame, last) % 255
         else:
@@ -70,26 +72,8 @@ def compress(video_path, output_video):
 
     out.release()
 
-    # Build substitution map
-    most_common = [val for val, _ in value_counts.most_common()]
-    substitution_map = {val: idx for idx, val in enumerate(most_common)}
-
-    # Second pass: Apply substitution
-    diff_frames = extract_frames(temp_video)
-    out = cv2.VideoWriter(output_video, fourcc, fps, (width, height), isColor=False)  # Grayscale output
-    for diff in tqdm(diff_frames, desc="Pass 2: Substitution"):
-        substituted = np.array([substitution_map[val] for val in diff.ravel()], dtype=np.uint8)
-        out.write(substituted.reshape(height, width))
-    out.release()
-
-    # Clean up temporary file
-    import os
-    os.remove(temp_video)
-
-    return substitution_map
-
 def decompress(compressed_video, output_video, substitution_map):
-    frames = extract_frames(compressed_video)
+    frames = extract_frames(compressed_video, as_grayscale=True)  # Read as grayscale
     total_frames = len(frames)
     s = int(total_frames / 3)
     r = frames[:s]  # Red differences
@@ -157,4 +141,4 @@ cmd = [
 subprocess.run(cmd)
 
 # Run decompression
-decompress("output_lossless.mp4", restored_video, substitution_map)
+#decompress("output_lossless.mp4", restored_video, substitution_map)
