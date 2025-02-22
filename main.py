@@ -107,7 +107,7 @@ cmd=[
     "-preset","slow",
     "-x265-params","lossless=1",
     "-c:a","copy",
-    "output_lossless.mp4"
+    "output_lossless.avi"
 ]
 subprocess.run(cmd)
 
