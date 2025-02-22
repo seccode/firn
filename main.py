@@ -16,47 +16,99 @@ def extract_frames(video_path):
     return frames
 
 def compress(video_path, output_video):
-    """Compress video by storing per-channel differences in grayscale format"""
     frames = extract_frames(video_path)
     height, width, _ = frames[0].shape
-    cap = cv2.VideoCapture(video_path)
+    cap=cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
+    fourcc=0
+    out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
+    last_remainder = None  # Track previous remainder
+    _frame=np.zeros(frames[0].shape).astype(np.uint8)
+    last=None
+    for frame in tqdm(frames, desc="Processing Frames"):
+        _frame[:,:,0]=frame[:,:,0]
+        if last is not None:
+            out.write(cv2.subtract(_frame,last)%255)
+        else:
+            out.write(_frame)
+        last=_frame
+    _frame=np.zeros(frames[0].shape).astype(np.uint8)
+    last=None
+    for frame in tqdm(frames, desc="Processing Frames"):
+        _frame[:,:,0]=frame[:,:,1]
+        if last is not None:
+            out.write(cv2.subtract(_frame,last)%255)
+        else:
+            out.write(_frame)
+        last=_frame
+    _frame=np.zeros(frames[0].shape).astype(np.uint8)
+    last=None
+    for frame in tqdm(frames, desc="Processing Frames"):
+        _frame[:,:,0]=frame[:,:,2]
+        if last is not None:
+            out.write(cv2.subtract(_frame,last)%255)
+        else:
+            out.write(_frame)
+        last=_frame
+    out.release()
 
-    # ✅ Use a valid lossless codec for macOS
+def decompress(compressed_video, output_video):
+    frames = extract_frames(compressed_video)
+    for frame in frames:
+        print(frame)
+    a
+    total_frames = len(frames)
+    s=int(total_frames/3)
+    r=frames[:s]
+    g=frames[s:-s]
+    b=frames[-s:]
+    height, width, _ = frames[0].shape
+    fps = cv2.VideoCapture(compressed_video).get(cv2.CAP_PROP_FPS)  # Undo the FPS doubling
     fourcc = 0
-    out = cv2.VideoWriter(output_video, fourcc, fps, (width, height), isColor=False)
-
-    for channel in range(3):  # Process Red, Green, Blue separately
-        last = None
-        for frame in tqdm(frames, desc=f"Processing Channel {channel}"):
-            current_channel = frame[:, :, channel].astype(np.int16)  # Use int16 to handle negatives
-            diff_frame = np.zeros((height, width), dtype=np.uint8)
-
-            if last is not None:
-                diff = (current_channel - last) % 256  # ✅ Fix wrap-around issue
-            else:
-                diff = current_channel
-
-            diff_frame[:, :] = diff.astype(np.uint8)
-            out.write(diff_frame)
-            last = current_channel.copy()  # ✅ Ensure `last` is an independent copy
-
+    out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
+    f=[np.zeros(frames[0].shape).astype(np.uint8) for _ in range(total_frames)]
+    last=None
+    for i,_f in enumerate(r):
+        if last is not None:
+            f[i][:,:,0]=cv2.add(last,_f[:,:,0])
+        else:
+            f[i][:,:,0]=_f[:,:,0]
+        last=f[i][:,:,0]
+    last=None
+    for i,_f in enumerate(g):
+        if last is not None:
+            f[i][:,:,1]=cv2.add(last,_f[:,:,0])
+        else:
+            f[i][:,:,1]=_f[:,:,0]
+        last=f[i][:,:,0]
+    last=None
+    for i,_f in enumerate(b):
+        if last is not None:
+            f[i][:,:,2]=cv2.add(last,_f[:,:,0])
+        else:
+            f[i][:,:,2]=_f[:,:,0]
+        last=f[i][:,:,2]
+    for _f in f:
+        out.write(_f)
     out.release()
 
 
 # Paths
 video_path = "input.avi"
 output_video = "output.avi"
-restored_video = "restored.avi"
 
 # Run compression
 compress(video_path, output_video)
-
-cmd = [
-    "ffmpeg", "-i", "output.avi",
-    "-c:v", "libx265", "-preset", "slow",
-    "-x265-params", "lossless=1",
-    "-c:a", "copy", "output_lossless.mp4"
+cmd=[
+    "ffmpeg","-i",
+    "output.avi",
+    "-c:v","libx265",
+    "-preset","slow",
+    "-x265-params","lossless=1",
+    "-c:a","copy",
+    "output_lossless.mp4"
 ]
 subprocess.run(cmd)
+
+#decompress(output_video,restored)
