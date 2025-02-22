@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import subprocess
 from tqdm import tqdm
+import zstandard as zstd
 
 def extract_frames(video_path):
     """Extracts frames from a video file"""
@@ -43,7 +44,7 @@ def compress(video_path, output_video):
         if np.array_equal(remainder, last_remainder):
             i+=1
         else:
-            x.append(i)
+            x.append(chr(i))
             i=0
             d.append(delta)
 
@@ -66,6 +67,9 @@ def compress(video_path, output_video):
     for _d in d:
         out.write(_d)
     out.release()
+    f=open("x","wb")
+    f.write(zstd.compress("".join(x).encode(),level=22))
+    f.close()
     return j
 
 def decompress(compressed_video, output_video):
