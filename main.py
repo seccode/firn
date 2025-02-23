@@ -15,6 +15,9 @@ def extract_frames(video_path):
     cap.release()
     return frames
 
+# Algorithm TODO being implemented: track common per channel value changes and replace common changes with lower values
+# most common change => 0
+# 2nd most common change => 1
 def compress(video_path, output_video):
     """
     Compresses the video using a custom differential encoding scheme.
