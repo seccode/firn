@@ -109,6 +109,7 @@ def decompress(compressed_video, output_video):
     out.release()
 
 # Paths for input and output videos.
+# Input is an already FFV1 compressed file
 video_path = "input.avi"
 output_video = "output.avi"
 
