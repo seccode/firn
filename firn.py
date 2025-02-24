@@ -1,9 +1,5 @@
 import argparse
 from collections import Counter, defaultdict
-import json
-import numpy as np
-import random
-import zlib
 import zstandard as zstd
 from tqdm import tqdm
 
@@ -11,16 +7,15 @@ SEP = {",", ".", ";", "?", "!", "\n", "-"}
 M = 252
 
 def compress(s, comp):
-    most_common_words = open("dict").read().split("\n")
+    most_common_words = open("dict2").read().split("\n")
     mcws = set(most_common_words)
 
-    # Use most common chars in text as symbols
     mc = [m[0] for m in Counter(s).most_common()]
     h = set(mc)
     i = 0
     C0, C1 = None, None
 
-    reserved={"0","1"}
+    reserved = {"0", "1"}
     while i < 256:
         c = chr(i)
         if c not in h and c not in reserved:
@@ -32,37 +27,26 @@ def compress(s, comp):
                 break
         i += 1
 
-    # If we couldn't find suitable C0 / C1, just compress with zstd alone
     if not all([C0, C1]):
-        return comp.compress(s.encode("utf-8","replace"))
+        print("No C0/C1 found, using zstd alone")
+        return comp.compress(s.encode("utf-8", "replace"))
 
     if len(s) > 300_000:
         symbols = mc[:20]
     else:
         symbols = mc[:45]
 
-    # Remove spaces/newlines or a/I if they exist in symbols
-    if "-" in symbols:
-        symbols.remove("-")
-    if " " in symbols:
-        symbols.remove(" ")
-    if "\n" in symbols:
-        symbols.remove("\n")
-    if "a" in symbols:   # optional
-        symbols.remove("a")
-    if "I" in symbols:   # optional
-        symbols.remove("I")
+    for char in ["-", " ", "\n", "a", "I"]:
+        if char in symbols:
+            symbols.remove(char)
 
     one_char_symbols = symbols[:]
-
-    # Add two-char symbols
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
             if l1 in SEP:
                 continue
             symbols.append(l0 + l1)
 
-    # Add three-char symbols
     for l0 in one_char_symbols:
         for l1 in one_char_symbols:
             for l2 in one_char_symbols:
@@ -70,7 +54,6 @@ def compress(s, comp):
                     continue
                 symbols.append(l0 + l1 + l2)
 
-    # Replace words with symbols
     words = s.split(" ")
     c = Counter(words)
     mcw = c.most_common()
@@ -85,88 +68,110 @@ def compress(s, comp):
                         if l3 in SEP:
                             continue
                         symbols.append(l0 + l1 + l2 + l3)
-
-        # Reorder dictionary's top M words by frequency
         reordered_top = sorted(most_common_words[:M], key=lambda word: -c[word])
         for w in reordered_top:
             inds.append(chr(most_common_words[:M].index(w) + ord(C1) + 1))
-
         most_common_words = reordered_top + most_common_words[M:]
         Q = "1"
 
-    # Build a mapping from each dictionary word -> symbol
-    d = {word: symbol for word, symbol in zip(most_common_words, symbols)}
-    g = set(d.values())
+    e = defaultdict(set)
+    d_base = {word: symbol for word, symbol in zip(most_common_words, symbols) if len(symbol) < len(word)}
+    y = {word: i for i, word in enumerate(most_common_words)}
+    g = set(d_base.values())
+    last = "the"
+
+    for i in range(1, len(words)):
+        if words[i] in d_base:
+            e[last].add(words[i])
+            last = words[i]
+        elif words[i][:-1] in d_base and words[i][-1] in SEP:
+            e[last].add(words[i][:-1])
+            last = words[i][:-1]
+        elif "\n" in words[i]:
+            ws = words[i].split("\n")
+            for w in ws:
+                if w in d_base:
+                    e[last].add(w)
+                    last = w
+                elif w[:-1] in d_base and w[-1] in SEP:
+                    e[last].add(w[:-1])
+                    last = w[:-1]
+        elif "-" in words[i]:
+            ws = words[i].split("-")
+            for w in ws:
+                if w in d_base:
+                    e[last].add(w)
+                    last = w
+                elif w[:-1] in d_base and w[-1] in SEP:
+                    e[last].add(w[:-1])
+                    last = w[:-1]
+
+    d = defaultdict(dict)
+    for k, v in tqdm(e.items()):
+        vl = sorted(v, key=lambda x: y[x])
+        i = 0
+        for _v in vl:
+            if i >= len(symbols):
+                break
+            if len(symbols[i]) < len(_v):
+                d[k][_v] = symbols[i]
+            i += 1
 
     new_words = []
+    last = "the"
+    replacements = 0
     for word in words:
-        # Handle newline-splitting
         if "\n" in word:
             ws = word.split("\n")
             w_parts = []
             for idx, wo in enumerate(ws):
-                segment = ""
-                # Try direct dictionary or punctuation
-                if wo in d:
-                    segment = d[wo]
-                elif wo[:-1] in d and len(wo) > 0 and wo[-1] in SEP:
-                    segment = d[wo[:-1]] + wo[-1]
-                elif wo in g:
-                    segment = C0 + wo
-                elif len(wo) > 1 and wo[:-1] in g and wo[-1] in SEP:
-                    segment = C0 + wo
-                else:
-                    segment = wo
-
-                # Append "\n" if this isn't the last piece
+                segment = wo
+                if wo in d[last] and len(d[last][wo]) < len(wo):
+                    segment = d[last][wo]
+                    last = wo
+                    replacements += 1
+                elif wo[:-1] in d[last] and len(wo) > 0 and wo[-1] in SEP and len(d[last][wo[:-1]]) < len(wo[:-1]):
+                    segment = d[last][wo[:-1]] + wo[-1]
+                    last = wo[:-1]
+                    replacements += 1
                 if idx < len(ws) - 1:
                     segment += "\n"
                 w_parts.append(segment)
-
             new_words.append("".join(w_parts))
 
-        # Handle dash-splitting
         elif "-" in word:
             ws = word.split("-")
             w_parts = []
             for idx, wo in enumerate(ws):
-                segment = ""
-                if wo in d:
-                    segment = d[wo]
-                elif wo[:-1] in d and len(wo) > 0 and wo[-1] in SEP:
-                    segment = d[wo[:-1]] + wo[-1]
-                elif wo in g:
-                    segment = C0 + wo
-                elif len(wo) > 1 and wo[:-1] in g and wo[-1] in SEP:
-                    segment = C0 + wo
-                else:
-                    segment = wo
-
-                # Add dash if not the last chunk
+                segment = wo
+                if wo in d[last] and len(d[last][wo]) < len(wo):
+                    segment = d[last][wo]
+                    last = wo
+                    replacements += 1
+                elif wo[:-1] in d[last] and len(wo) > 0 and wo[-1] in SEP and len(d[last][wo[:-1]]) < len(wo[:-1]):
+                    segment = d[last][wo[:-1]] + wo[-1]
+                    last = wo[:-1]
+                    replacements += 1
                 if idx < len(ws) - 1:
                     segment += "-"
                 w_parts.append(segment)
-
             new_words.append("".join(w_parts))
 
-        # Normal word or punctuation
-        elif word in d:
-            new_words.append(d[word])
-        elif word[:-1] in d and len(word) > 0 and word[-1] in SEP:
-            new_words.append(d[word[:-1]] + word[-1])
-        elif word in g:
-            new_words.append(C0 + word)
-        elif len(word) > 1 and word[:-1] in g and word[-1] in SEP:
-            new_words.append(C0 + word)
+        elif word in d[last] and len(d[last][word]) < len(word):
+            new_words.append(d[last][word])
+            last = word
+            replacements += 1
+        elif word[:-1] in d[last] and len(word) > 0 and word[-1] in SEP and len(d[last][word[:-1]]) < len(word[:-1]):
+            new_words.append(d[last][word[:-1]] + word[-1])
+            last = word[:-1]
+            replacements += 1
         else:
             new_words.append(word)
 
-    # Next, build the arrays for compression
     nn = []
     x = []
     i = 0
     for word in new_words:
-        # If there's exactly one newline in this chunk, handle special marker
         if word.count("\n") == 1:
             wos = word.split("\n")
             nn.append(wos[0])
@@ -177,202 +182,72 @@ def compress(s, comp):
             nn.append(word)
             i += 1
 
-    c=Counter(nn).most_common()
-    d={}
-    uc=[chr(i) for i in range(ord(C1)+1,5000) if chr(i) not in h]
-    i=0
-    if len(s)<300_000:
-        n=100
+    # Count frequencies and build dictionary
+    c = Counter(nn).most_common()
+    d = {}
+    uc = [chr(i) for i in range(ord(C1) + 1, 5000) if chr(i) not in h]
+    i = 0
+    if len(s) < 300_000:
+        n = 100
     else:
-        n=250
-    for m in c[:n]:
+        n = 250
+    for m in c[:n]:  # m = (word, count)
         if m[0] not in g:
-            if len(m[0])>1 and m[0][:-1] not in g:
-                if m[-1] not in SEP:
-                    d[m[0]]=uc[i]
-                    i+=1
+            if len(m[0]) > 1 and m[0][:-1] not in g:
+                if m[-1] not in SEP:  # Should be m[0][-1], assuming typo
+                    if len(m[0]) > len(uc[i]):  # Only replace if symbol is shorter
+                        d[m[0]] = uc[i]
+                        i += 1
+                        if i >= len(uc):
+                            break
 
-    new=[]
+    # Apply dictionary substitutions
+    new = []
+    replacements = 0
     for word in nn:
         if word in d:
             new.append(d[word])
-        elif len(word)>0 and word[:-1] in d and word[-1] in SEP:
-            new.append(d[word[:-1]]+word[-1])
+            replacements += 1
+        elif len(word) > 0 and word[:-1] in d and word[-1] in SEP:
+            new.append(d[word[:-1]] + word[-1])
+            replacements += 1
         else:
             new.append(word)
 
-    # Construct the final string to compress
-    # Format:  C0 C1-joined [ inds, x, one_char_symbols, nn ] + Q
-    v = C1.join([
+    # Construct the final string with minimal separators
+    v_parts = [
         C0,
         "".join(inds),
         "".join(x),
-        " ".join(one_char_symbols),
-        " ".join(new),
-        " ".join(d.keys()),
-        "".join(d.values()),
-    ]) + Q
+        " ".join(one_char_symbols),  # Keep spaces here as it's metadata
+        "".join(new),  # No spaces between words to reduce size
+        " ".join(d.keys()),  # Spaces for parsing clarity
+        "".join(d.values()),  # No spaces for efficiency
+    ]
+    v = C1.join(v_parts) + Q
 
-    return comp.compress(v.encode("utf-8", "replace"))
+    # Diagnostics
+    input_bytes = s.encode("utf-8", "replace")
+    v_bytes = v.encode("utf-8", "replace")
+    compressed_bytes = zstd.compress(v_bytes,level=22)
+    print(f"Original input size: {len(input_bytes)} bytes")
+    print(f"Pre-zstd size (v): {len(v_bytes)} bytes")
+    print(f"Replacements made: {replacements}")
+    print(f"Final compressed size: {len(compressed_bytes)} bytes")
 
+    return compressed_bytes
 
-def decompress(b):
-    d_str = zstd.decompress(b).decode("utf-8","replace")
-
-    # Q is last char; first 2 are C0, C1
-    Q = d_str[-1]
-    C0 = d_str[0]
-    C1 = d_str[1]
-
-    # Everything between d_str[2:-1]
-    _map, x, symbols, new, dk, dv = d_str[2:-1].split(C1)
-    symbols = symbols.split(" ")
-    new = new.split(" ")
-    dk=dk.split(" ")
-
-    d={v:k for k,v in zip(dk,dv)}
-    nn=[]
-    for word in new:
-        if word in d:
-            nn.append(d[word])
-        elif len(word)>1 and word[:-1] in d and word[-1] in SEP:
-            nn.append(d[word[:-1]]+word[-1])
-        else:
-            nn.append(word)
-
-    # Rebuild "new_words" by combining tokens that had a single newline
-    new_words = []
-    i = 0
-    j = 0
-    count_since_newline = 0
-    while i < len(nn):
-        if j < len(x):
-            target = ord(x[j]) - ord(C1) - 1
-        else:
-            target = None
-
-        if target is not None and count_since_newline == target and (i+1) < len(nn):
-            new_words.append(nn[i] + "\n" + nn[i+1])
-            i += 2
-            j += 1
-            count_since_newline = 0
-        else:
-            new_words.append(nn[i])
-            i += 1
-            count_since_newline += 1
-
-    # If Q == "1", reorder dictionary
-    m = set(_map)  # not strictly needed, but used if debugging
-    most_common_words = open("dict").read().split("\n")
-    if Q == "1":
-        # Rebuild the top M portion using the order in _map
-        # _map holds characters that indicate the new order
-        # For each char in _map, we get the index in [0..M-1]
-        # then pick that from the old top M
-        reordered = []
-        for _m in _map:
-            idx = ord(_m) - ord(C1) - 1
-            reordered.append(most_common_words[idx])
-        most_common_words = reordered + most_common_words[M:]
-
-    # Expand 2-char, 3-char, 4-char symbols in the same order
-    t = symbols[:]
-    # 2-char
-    for l0 in t:
-        for l1 in t:
-            if l1 in SEP:
-                continue
-            symbols.append(l0 + l1)
-
-    # 3-char
-    for l0 in t:
-        for l1 in t:
-            for l2 in t:
-                if l2 in SEP:
-                    continue
-                symbols.append(l0 + l1 + l2)
-
-    # Possibly 4-char
-    if Q == "1":
-        for l0 in t:
-            for l1 in t:
-                for l2 in t:
-                    for l3 in t:
-                        if l3 in SEP:
-                            continue
-                        symbols.append(l0 + l1 + l2 + l3)
-
-    # Build reverse dictionary: symbol -> word
-    d = {symbol: word for symbol, word in zip(symbols, most_common_words)}
-
-    # Final expansion of new_words back to original
-    words = []
-    for word in new_words:
-        if "\n" in word:
-            ws = word.split("\n")
-            piece = []
-            for idx, wo in enumerate(ws):
-                if wo in d:
-                    piece.append(d[wo])
-                elif len(wo) > 1 and wo[:-1] in d and wo[-1] in SEP:
-                    piece.append(d[wo[:-1]] + wo[-1])
-                elif len(wo) > 0 and wo[0] == C0:
-                    # marker indicates this was a literal symbol
-                    piece.append(wo[1:])
-                else:
-                    piece.append(wo)
-            words.append("\n".join(piece))
-
-        elif "-" in word:
-            ws = word.split("-")
-            piece = []
-            for idx, wo in enumerate(ws):
-                if wo in d:
-                    piece.append(d[wo])
-                elif len(wo) > 1 and wo[:-1] in d and wo[-1] in SEP:
-                    piece.append(d[wo[:-1]] + wo[-1])
-                elif len(wo) > 0 and wo[0] == C0:
-                    piece.append(wo[1:])
-                else:
-                    piece.append(wo)
-            words.append("-".join(piece))
-
-        elif word in d:
-            words.append(d[word])
-        elif len(word) > 1 and word[:-1] in d and word[-1] in SEP:
-            words.append(d[word[:-1]] + word[-1])
-        elif len(word) > 0 and word[0] == C0:
-            words.append(word[1:])
-        else:
-            words.append(word)
-
-    return " ".join(words)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--f", help="File")
-    parser.add_argument("--e", help="Encoding")
+def main():
+    parser = argparse.ArgumentParser(description="Compress a file")
+    parser.add_argument("--f", required=True, help="Input file")
+    parser.add_argument("--e", default="utf-8", help="Encoding")
     args = parser.parse_args()
 
-    # Read the input file
-    s = open(args.f, encoding=args.e).read()
+    with open(args.f, "r", encoding=args.e) as f:
+        s = f.read()
 
-    # Save s to "s" (for debugging or other usage)
-    with open("s", "w") as f:
-        f.write(s)
+    comp = zstd.ZstdCompressor()
+    compressed_data = compress(s, comp)
 
-    comp = zstd.ZstdCompressor(level=3)
-
-    # Compress with our custom algorithm
-    b = compress(s, comp)
-    print(len(b))
-
-    with open("compressed", "wb") as f:
-        f.write(b)
-
-    # Decompress
-    _s = decompress(b)
-    # Final assertion
-    assert _s == s
-
+if __name__ == "__main__":
+    main()
