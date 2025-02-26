@@ -26,13 +26,16 @@ def compress(s):
     x=list("".join(new_words))
     m=500/(len(ws)//200)
     inds=[]
-    for i in range(10_000):
+    last=0
+    for i in tqdm(range(1_000_000)):
         samples=random.sample(x,75)
         if samples.count("0")==75:
-            inds.append(i)
-            print(i)
+            inds.append(chr(i-last))
+            last=i
+    print(len(inds)*75/len(x))
 
-    v=" ".join(set(words))
+    v=" ".join(sorted(set(words)))+\
+        "".join(inds)
 
     return zstd.compress(v.encode("utf-8","replace"),level=1)
 
