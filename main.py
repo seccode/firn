@@ -12,30 +12,48 @@ def compress(s):
     mcws=set(most_common_words)
     words=s.split(" ")
     ws=set(words)
+    b=[]
+    n=[]
+    for word in most_common_words:
+        if word in ws:
+            n.append(word)
+            b.append("0")
+        else:
+            b.append("1")
+    ws=set(words)
     symbols=[]
     for i in range(256):
-        for j in range(len(ws)//200):
-            symbols.append("0"*j+chr(i)+"0"*(len(ws)//200-j))
-    d={word:symbol for word,symbol in zip(ws,symbols)}
+        for j in range(len(ws)//100):
+            symbols.append("0"*j+chr(i)+"0"*(len(ws)//100-j))
+    d={word:symbol for word,symbol in zip(n,symbols)}
     new_words=[]
+    j=len(d)
+    e=set()
     for word in words:
-        new_words.append(d[word])
+        if word in d:
+            new_words.append(d[word])
+        else:
+            e.add(word)
+            d[word]=symbols[j]
+            new_words.append(d[word])
+            j+=1
 
     print(len(zstd.compress("".join(words).encode("utf-8","replace"),level=1)))
 
     x=list("".join(new_words))
-    m=500/(len(ws)//200)
+    m=500/(len(ws)//100)
     inds=[]
     last=0
-    for i in tqdm(range(1_000_000)):
-        samples=random.sample(x,75)
-        if samples.count("0")==75:
+    for i in tqdm(range(100_000)):
+        samples=random.sample(x,100)
+        if samples.count("0")==100:
             inds.append(chr(i-last))
             last=i
-    print(len(inds)*75/len(x))
+    print(len(inds)*100/len(x))
 
-    v=" ".join(sorted(set(words)))+\
-        "".join(inds)
+    v=" ".join(list(e))+\
+        "".join(inds)+\
+        "".join(b)
 
     return zstd.compress(v.encode("utf-8","replace"),level=1)
 
