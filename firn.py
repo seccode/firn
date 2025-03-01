@@ -174,6 +174,8 @@ def compress(s, comp):
             nn.append(word)
             i += 1
 
+    # TODO: during first pass over the text, chunk into blocks and use different dictionary orders for each chunk
+
     # Construct the final string to compress
     # Format:  C0 C1-joined [ inds, x, one_char_symbols, nn ] + Q
     v = C1.join([
