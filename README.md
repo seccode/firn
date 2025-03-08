@@ -12,7 +12,7 @@ python firn.py --f <file> --e <encoding>
 # How it works
 Firn uses a sorted subset of most common chars in the text as dictionary replacement symbols using 1, 2, 3, and sometimes 4 char combinations.
 
-Using a sorted by frequency subset of chars increases the homogeneity of the transformed text, making it easier to compress.
+Using a sorted by frequency subset of chars increases the zipfian characteristics of the transformed text, making it easier to compress.
 
 # Results on 50KB of dickens text
 | Compressor | Compressed Size (Bytes) | Improvement (%) |
