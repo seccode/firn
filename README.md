@@ -29,5 +29,5 @@ If you would like to sponsor further development of this compressor, please make
 
 Thank you!
 
-This is a demonstration of the algorithm. Work is being done to create a production ready package. This is a work in progress so the most recent files might not be the most up to date code, the history stores all versions
+This is a demonstration of the algorithm. Work is being done to create a production ready package. Also considering making a zstd fork with the change of offset,length being remapped to the most frequent bytes. This should make things more Zipfian-like. This is a work in progress so the most recent files might not be the most up to date code, the history stores all versions
 
