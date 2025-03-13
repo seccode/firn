@@ -23,11 +23,6 @@ Using a sorted by frequency subset of chars increases the zipfian characteristic
 # Limitations
 Works well for readable text-based files
 
-# Donations
-If you would like to sponsor further development of this compressor, please make donations via the Ethereum network:
-0x258db63bc7ea9B511D1576Aac5c41a7C8d1193D4
-
-Thank you!
 
 This is a demonstration of the algorithm. Work is being done to create a production ready package. Also considering making a zstd fork with the change of offset,length being remapped to the most frequent bytes. This should make things more Zipfian-like. This is a work in progress so the most recent files might not be the most up to date code, the history stores all versions
 
