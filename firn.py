@@ -32,6 +32,9 @@ def compress(s, comp):
                 break
         i += 1
 
+    if not all([C0,C1]):
+        return comp.compress(s.encode("utf-8","replace"))
+
     if len(s) > 300_000:
         symbols = mc[:20]
     else:
@@ -174,8 +177,6 @@ def compress(s, comp):
             nn.append(word)
             i += 1
 
-    # TODO: during first pass over the text, chunk into blocks and use different dictionary orders for each chunk
-
     # Construct the final string to compress
     # Format:  C0 C1-joined [ inds, x, one_char_symbols, nn ] + Q
     v = C1.join([
@@ -186,11 +187,14 @@ def compress(s, comp):
         " ".join(nn),
     ]) + Q
 
-    return comp.compress(v.encode("utf-8", "replace"))
+    return b'\x01'+comp.compress(v.encode("utf-8", "replace"))
 
 
 def decompress(b):
-    d_str = zstd.decompress(b).decode("utf-8","replace")
+    if b[0]!=0x01:
+        return zstd.decompress(b).decode("utf-8","replace")
+
+    d_str = zstd.decompress(b[1:]).decode("utf-8","replace")
 
     # Q is last char; first 2 are C0, C1
     Q = d_str[-1]
@@ -318,13 +322,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Read the input file
-    s = open(args.f, encoding=args.e).read()
+    s = open(args.f, encoding=args.e).read()[50_000:100_000]
 
     # Save s to "s" (for debugging or other usage)
     with open("s", "w") as f:
         f.write(s)
 
     comp = zstd.ZstdCompressor(level=22)
+    print(len(comp.compress(s.encode("utf-8","replace"))))
 
     # Compress with our custom algorithm
     b = compress(s, comp)
