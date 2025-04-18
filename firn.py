@@ -70,7 +70,7 @@ def compress(s, comp):
                 symbols.append(l0 + l1 + l2)
 
     # Replace words with symbols
-    words = s.split(" ")
+    words = s.split(mc[0])
     c = Counter(words)
     mcw = c.most_common()
 
