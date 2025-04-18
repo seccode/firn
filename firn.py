@@ -181,10 +181,11 @@ def compress(s, comp):
     # Format:  C0 C1-joined [ inds, x, one_char_symbols, nn ] + Q
     v = C1.join([
         C0,
+        mc[0],
         "".join(inds),
         "".join(x),
         " ".join(one_char_symbols),
-        " ".join(nn),
+        mc[0].join(nn),
     ]) + Q
 
     return b'\x01'+comp.compress(v.encode("utf-8", "replace"))
@@ -202,9 +203,9 @@ def decompress(b):
     C1 = d_str[1]
 
     # Everything between d_str[2:-1]
-    _map, x, symbols, nn = d_str[2:-1].split(C1)
+    mc0, _map, x, symbols, nn = d_str[2:-1].split(C1)
     symbols = symbols.split(" ")
-    nn = nn.split(" ")
+    nn = nn.split(mc0)
 
     # Rebuild "new_words" by combining tokens that had a single newline
     new_words = []
@@ -312,7 +313,7 @@ def decompress(b):
         else:
             words.append(word)
 
-    return " ".join(words)
+    return mc0.join(words)
 
 
 if __name__ == "__main__":
